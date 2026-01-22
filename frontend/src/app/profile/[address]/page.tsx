@@ -22,7 +22,7 @@ export default function ProfilePage({
       <div className="mx-auto max-w-5xl space-y-8">
         
         {/* Header Section */}
-        <div className="relative rounded-2xl bg-white p-6 shadow-sm border border-gray-100 sm:p-8">
+        <div className="relative rounded-2xl bg-white p-6 shadow-md border border-gray-100 sm:p-8 transition-shadow duration-300 hover:shadow-xl">
           <div className="absolute right-6 top-6 flex gap-3">
             <button className="rounded-full bg-gray-100 p-2 text-gray-600 hover:bg-gray-200 transition-colors">
               <Share2 className="h-5 w-5" />

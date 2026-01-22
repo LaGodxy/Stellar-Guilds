@@ -22,7 +22,7 @@ export const ActivityTimeline: React.FC<ActivityTimelineProps> = ({
   activities,
 }) => {
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 h-full">
+    <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 h-full transition-shadow duration-300 hover:shadow-xl">
       <h3 className="mb-4 text-lg font-bold text-gray-900">Recent Activity</h3>
       <div className="max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
         <div className="relative space-y-6 pl-4 border-l-2 border-gray-100">

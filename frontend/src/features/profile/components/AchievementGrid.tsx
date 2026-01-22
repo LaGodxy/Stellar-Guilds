@@ -17,7 +17,7 @@ export const AchievementGrid: React.FC<AchievementGridProps> = ({
   achievements,
 }) => {
   return (
-    <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100">
+    <div className="rounded-2xl bg-white p-6 shadow-sm border border-gray-100 transition-shadow duration-300 hover:shadow-xl">
       <h3 className="mb-4 text-lg font-bold text-gray-900">Achievements</h3>
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
         {achievements.map((achievement) => {

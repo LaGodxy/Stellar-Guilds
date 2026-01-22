@@ -3,7 +3,7 @@ import { UserProfile, Achievement, ActivityItem, Stats } from "./types";
 export const mockUser: UserProfile = {
   address: "GABX...9KLM",
   displayName: "Tybravo",
-  avatarUrl: "https://i.pravatar.cc/150",
+  avatarUrl: "https://i.pravatar.cc/150?img=11",
   bio: "Open-source contributor & Stellar ecosystem builder.",
   tier: "Gold",
   reputationScore: 720,

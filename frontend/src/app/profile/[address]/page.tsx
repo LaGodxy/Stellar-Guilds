@@ -18,6 +18,8 @@ export default function ProfilePage({
   params: { address: string };
 }) {
   return (
+
+    
     <main className="min-h-screen bg-slate-50 pb-20 pt-10 px-4 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-5xl space-y-8">
         
@@ -95,6 +97,24 @@ export default function ProfilePage({
         </div>
 
       </div>
+
+       {/* user profile  */}
+      {/* <div className="z-10 max-w-5xl w-full items-center justify-center font-mono text-sm lg:flex flex-col gap-6 text-center">
+        <h1 className="text-4xl font-bold text-gray-900">Stellar Guilds</h1>
+        <p className="text-xl text-gray-600">User Profile & Reputation Dashboard</p>
+        
+        <Link 
+          href="/profile/GABX...9KLM"
+          className="group flex items-center gap-2 rounded-lg bg-blue-600 px-6 py-3 text-white transition-all hover:bg-blue-700"
+        >
+          View Demo Profile
+          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+        </Link>
+        
+        <p className="mt-4 text-gray-400">
+           Demo Address: GABX...9KLM
+        </p>
+      </div> */}
     </main>
   );
 }

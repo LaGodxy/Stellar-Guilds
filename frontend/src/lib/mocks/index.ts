@@ -1,5 +1,8 @@
 import { Guild, Bounty, UserProfile } from '@/types/ui'
 
+// Re-export governance mocks
+export * from './governance'
+
 // Mock Guild Data
 export const mockGuilds: Guild[] = [
   {

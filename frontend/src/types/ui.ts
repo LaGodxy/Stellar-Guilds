@@ -83,3 +83,49 @@ export interface UserProfile {
   joinedAt: string
   guilds: string[]
 }
+
+// Governance Types
+export type ProposalType = 'treasury' | 'rule-change' | 'membership' | 'general'
+export type ProposalStatus = 'draft' | 'active' | 'passed' | 'rejected' | 'executed'
+export type VoteChoice = 'for' | 'against' | 'abstain'
+
+export interface Vote {
+  id: string
+  proposalId: string
+  voterId: string
+  voterAddress: string
+  choice: VoteChoice
+  votingPower: number
+  timestamp: string
+}
+
+export interface VotingStats {
+  for: number
+  against: number
+  abstain: number
+  total: number
+  forPower: number
+  againstPower: number
+  abstainPower: number
+  totalPower: number
+}
+
+export interface Proposal {
+  id: string
+  guildId: string
+  title: string
+  description: string
+  type: ProposalType
+  status: ProposalStatus
+  proposerId: string
+  proposerAddress: string
+  proposerName: string
+  createdAt: string
+  startDate: string
+  endDate: string
+  quorum: number
+  quorumThreshold: number
+  executionData?: string
+  votes: Vote[]
+  votingStats: VotingStats
+}

@@ -1,0 +1,96 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  email       String   @unique
+  username    String   @unique
+  password    String
+  firstName   String
+  lastName    String
+  bio         String?
+  avatarUrl   String?
+  role        String   @default("USER")
+  isActive    Boolean  @default(true)
+  lastLoginAt DateTime?
+
+  // Relations
+  ownedGuilds      Guild[]    @relation("UserOwnerGuilds")
+  joinedGuilds     GuildMembership[]
+  createdBounties  Bounty[]   @relation("UserCreatedBounties")
+  assignedBounties Bounty[]   @relation("UserAssignedBounties")
+  
+  @@map("users")
+}
+
+model Guild {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String
+  slug        String   @unique
+  description String?
+  avatarUrl   String?
+  bannerUrl   String?
+  ownerId     String
+  memberCount Int      @default(1)
+  isActive    Boolean  @default(true)
+
+  // Relations
+  owner        User     @relation("UserOwnerGuilds", fields: [ownerId], references: [id])
+  memberships  GuildMembership[]
+  bounties     Bounty[] @relation("GuildBounties")
+
+  @@map("guilds")
+}
+
+model GuildMembership {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  joinedAt  DateTime @default(now())
+  role      String   @default("MEMBER") // MEMBER, MODERATOR, ADMIN, OWNER
+  userId    String
+  guildId   String
+  
+  // Relations
+  user  User @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  @@unique([userId, guildId])
+  @@map("guild_memberships")
+}
+
+model Bounty {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  title        String
+  description  String
+  status       String   @default("OPEN") // OPEN, IN_PROGRESS, COMPLETED, CANCELLED
+  rewardAmount Decimal
+  rewardToken  String   @default("STELLAR")
+  deadline     DateTime?
+  creatorId    String
+  assigneeId   String?
+  guildId      String?
+  
+  // Relations
+  creator  User   @relation("UserCreatedBounties", fields: [creatorId], references: [id])
+  assignee User?  @relation("UserAssignedBounties", fields: [assigneeId], references: [id])
+  guild    Guild? @relation("GuildBounties", fields: [guildId], references: [id])
+
+  @@map("bounties")
+}

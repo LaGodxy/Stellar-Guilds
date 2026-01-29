@@ -52,6 +52,14 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
     return this.prisma.bounty;
   }
 
+  get role() {
+    return this.prisma.role;
+  }
+
+  get permission() {
+    return this.prisma.permission;
+  }
+
   // Expose Prisma utilities
   get $transaction() {
     return this.prisma.$transaction.bind(this.prisma);

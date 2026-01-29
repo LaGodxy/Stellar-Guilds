@@ -13,6 +13,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+  OWNER
+}
+
+enum GuildRole {
+  MEMBER
+  MODERATOR
+  ADMIN
+  OWNER
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String   @unique
+  description String?
+  permissions Permission[]
+  users     User[]   @relation("UserRoles")
+
+  @@map("roles")
+}
+
+model Permission {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  name      String   @unique
+  description String?
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@map("permissions")
+}
+
 model User {
   id                String   @id @default(cuid())
   createdAt         DateTime @default(now())
@@ -24,17 +62,24 @@ model User {
   lastName          String
   bio               String?
   avatarUrl         String?
-  role              String   @default("USER")
+  role              UserRole @default(USER)
   isActive          Boolean  @default(true)
   lastLoginAt       DateTime?
   walletAddress     String?  @unique
   refreshToken      String?
+  
+  // Profile fields
+  profileBio        String?
+  profileUrl        String?
+  discordHandle     String?
+  twitterHandle     String?
 
   // Relations
   ownedGuilds      Guild[]    @relation("UserOwnerGuilds")
   joinedGuilds     GuildMembership[]
   createdBounties  Bounty[]   @relation("UserCreatedBounties")
   assignedBounties Bounty[]   @relation("UserAssignedBounties")
+  roles            Role[]     @relation("UserRoles")
   
   @@map("users")
 }
@@ -64,13 +109,13 @@ model GuildMembership {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
   joinedAt  DateTime @default(now())
-  role      String   @default("MEMBER") // MEMBER, MODERATOR, ADMIN, OWNER
+  role      GuildRole @default(MEMBER)
   userId    String
   guildId   String
   
   // Relations
-  user  User @relation(fields: [userId], references: [id])
-  guild Guild @relation(fields: [guildId], references: [id])
+  user  User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guild Guild @relation(fields: [guildId], references: [id], onDelete: Cascade)
 
   @@unique([userId, guildId])
   @@map("guild_memberships")

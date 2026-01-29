@@ -78,6 +78,7 @@ export class AuthService {
       user.id,
       user.email,
       user.walletAddress || undefined,
+      user.role,
     );
 
     // Save refresh token to database
@@ -130,6 +131,7 @@ export class AuthService {
       user.id,
       user.email,
       user.walletAddress || undefined,
+      user.role,
     );
 
     // Save refresh token to database
@@ -198,6 +200,7 @@ export class AuthService {
       user.id,
       user.email,
       user.walletAddress || undefined,
+      user.role,
     );
 
     // Save refresh token to database
@@ -245,6 +248,7 @@ export class AuthService {
           user.id,
           user.email,
           user.walletAddress || undefined,
+          user.role,
         );
 
       // Save new refresh token
@@ -287,10 +291,12 @@ export class AuthService {
     userId: string,
     email: string,
     walletAddress?: string,
+    role?: string,
   ) {
     const payload = {
       sub: userId,
       email,
+      role: role || 'USER',
       ...(walletAddress && { walletAddress }),
     };
 

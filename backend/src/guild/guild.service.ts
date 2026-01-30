@@ -111,7 +111,7 @@ export class GuildService {
   }
 
   async searchGuilds(q: string | undefined, page = 0, size = 20) {
-    const where = q
+    const textFilter = q
       ? {
           OR: [
             { name: { contains: q, mode: 'insensitive' } },
@@ -119,6 +119,11 @@ export class GuildService {
           ],
         }
       : {};
+
+    // Enforce discoverable guilds only for public search
+    const discoverFilter = { settings: { path: ['discoverable'], equals: true } };
+
+    const where = Object.keys(textFilter).length ? { AND: [textFilter, discoverFilter] } : discoverFilter;
 
     const [items, total] = await Promise.all([
       this.prisma.guild.findMany({ where, skip: page * size, take: size }),

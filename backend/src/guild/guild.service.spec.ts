@@ -56,4 +56,19 @@ describe('GuildService (settings integration)', () => {
     const updated = await service.updateGuild(guildId, { settings: { requireApproval: true } } as any, 'owner1');
     expect(updated.settings.requireApproval).toBe(true);
   });
+
+  it('searches only discoverable guilds', async () => {
+    prisma.guild.findMany.mockResolvedValue([{ id: 'g1', name: 'G1' }]);
+    prisma.guild.count.mockResolvedValue(1);
+
+    const res = await service.searchGuilds('G', 0, 10);
+    expect(res.items.length).toBe(1);
+
+    const calledWhere = prisma.guild.findMany.mock.calls[0][0].where;
+    if (calledWhere.AND) {
+      expect(calledWhere.AND).toEqual(expect.arrayContaining([expect.objectContaining({ settings: { path: ['discoverable'], equals: true } })]));
+    } else {
+      expect(calledWhere).toEqual(expect.objectContaining({ settings: { path: ['discoverable'], equals: true } }));
+    }
+  });
 });

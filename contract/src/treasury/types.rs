@@ -1,4 +1,13 @@
-use soroban_sdk::{contracttype, Address, Env, Map, String, Vec};
+use soroban_sdk::{contracttype, contracterror, Address, Env, Map, String, Vec};
+
+/// Error types for treasury operations
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u32)]
+pub enum TreasuryError {
+    BudgetExceeded = 1,
+    AllowanceExceeded = 2,
+}
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]

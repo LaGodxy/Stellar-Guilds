@@ -1,8 +1,8 @@
 use soroban_sdk::{token::Client as TokenClient, Address, Env, String, Symbol, Vec};
 
 use crate::treasury::multisig::{
-    add_approval, assert_signer, expire_if_needed, required_approvals_for_tx, validate_threshold,
-    TX_EXPIRY_SECONDS,
+    add_approval, assert_signer, ensure_is_signer, expire_if_needed, required_approvals_for_tx,
+    validate_threshold, TX_EXPIRY_SECONDS,
 };
 use crate::treasury::storage::{
     get_allowance, get_budget, get_next_treasury_id, get_next_tx_id, get_treasury,
@@ -11,7 +11,7 @@ use crate::treasury::storage::{
 use crate::treasury::types::{
     Allowance, Budget, DepositEvent, EmergencyPauseEvent, Transaction, TransactionApprovedEvent,
     TransactionExecutedEvent, TransactionStatus, TransactionType, Treasury,
-    TreasuryInitializedEvent, WithdrawalProposedEvent,
+    TreasuryInitializedEvent, TreasuryError, WithdrawalProposedEvent,
 };
 
 pub fn initialize_treasury(
@@ -208,7 +208,7 @@ pub fn approve_transaction(env: &Env, tx_id: u64, approver: Address) -> bool {
         panic!("transaction not approvable");
     }
 
-    assert_signer(env, &treasury, &approver);
+    ensure_is_signer(&treasury, &approver);
     add_approval(&mut tx, &approver);
 
     let required = required_approvals_for_tx(&treasury, &tx);
@@ -231,9 +231,9 @@ pub fn approve_transaction(env: &Env, tx_id: u64, approver: Address) -> bool {
     true
 }
 
-fn enforce_budget(env: &Env, treasury_id: u64, category: &String, amount: i128) {
+fn enforce_budget(env: &Env, treasury_id: u64, category: &String, amount: i128) -> Result<(), TreasuryError> {
     if amount <= 0 {
-        return;
+        return Ok(());
     }
     let now = env.ledger().timestamp();
     let mut budget = get_budget(env, treasury_id, category).unwrap_or(Budget {
@@ -252,11 +252,12 @@ fn enforce_budget(env: &Env, treasury_id: u64, category: &String, amount: i128) 
     }
 
     if budget.allocated_amount > 0 && budget.spent_amount + amount > budget.allocated_amount {
-        panic!("budget exceeded");
+        return Err(TreasuryError::BudgetExceeded);
     }
 
     budget.spent_amount += amount;
     store_budget(env, &budget);
+    Ok(())
 }
 
 fn enforce_allowance(
@@ -265,19 +266,20 @@ fn enforce_allowance(
     admin: &Address,
     token: &Option<Address>,
     amount: i128,
-) {
+) -> Result<(), TreasuryError> {
     if amount <= 0 {
-        return;
+        return Ok(());
     }
 
     if let Some(mut allowance) = get_allowance(env, treasury_id, admin, token) {
         allowance.ensure_period_current(env);
         if allowance.remaining_amount < amount {
-            panic!("allowance exceeded");
+            return Err(TreasuryError::AllowanceExceeded);
         }
         allowance.remaining_amount -= amount;
         store_allowance(env, &allowance);
     }
+    Ok(())
 }
 
 pub fn execute_transaction(env: &Env, tx_id: u64, executor: Address) -> bool {
@@ -300,8 +302,7 @@ pub fn execute_transaction(env: &Env, tx_id: u64, executor: Address) -> bool {
         panic!("treasury is paused");
     }
 
-    // require signer to execute
-    assert_signer(env, &treasury, &executor);
+    ensure_is_signer(&treasury, &executor);
 
     if !matches!(tx.status, TransactionStatus::Approved) {
         panic!("transaction must be approved");
@@ -321,8 +322,19 @@ pub fn execute_transaction(env: &Env, tx_id: u64, executor: Address) -> bool {
                 _ => String::from_str(env, "other"),
             };
 
-            enforce_budget(env, tx.treasury_id, &category, tx.amount);
-            enforce_allowance(env, tx.treasury_id, &executor, &tx.token, tx.amount);
+            // Convert Result to panic with expected error message
+            // This creates a proper contract error (all panics in Soroban become contract errors)
+            // while maintaining the expected error message for test compatibility
+            enforce_budget(env, tx.treasury_id, &category, tx.amount)
+                .unwrap_or_else(|e| match e {
+                    TreasuryError::BudgetExceeded => panic!("budget exceeded"),
+                    TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
+                });
+            enforce_allowance(env, tx.treasury_id, &executor, &tx.token, tx.amount)
+                .unwrap_or_else(|e| match e {
+                    TreasuryError::BudgetExceeded => panic!("budget exceeded"),
+                    TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
+                });
 
             match tx.token {
                 Some(ref token_addr) => {
@@ -393,12 +405,20 @@ pub fn execute_milestone_payment(
 
     // Budget enforcement under the "milestone" category
     let category = String::from_str(env, "milestone");
-    enforce_budget(env, treasury_id, &category, amount);
+    enforce_budget(env, treasury_id, &category, amount)
+        .unwrap_or_else(|e| match e {
+            TreasuryError::BudgetExceeded => panic!("budget exceeded"),
+            TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
+        });
 
     // Allowance enforcement (if any) keyed by current contract address;
     // if no allowance exists this is a no-op.
     let executor = env.current_contract_address();
-    enforce_allowance(env, treasury_id, &executor, &token, amount);
+    enforce_allowance(env, treasury_id, &executor, &token, amount)
+        .unwrap_or_else(|e| match e {
+            TreasuryError::BudgetExceeded => panic!("budget exceeded"),
+            TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
+        });
 
     // Move funds from treasury to recipient
     match token {

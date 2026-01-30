@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { LucideIcon } from "lucide-react";
 
-type AccentColor = "violet" | "cyan" | "amber" | "violet" | "rose" | "blue";
+type AccentColor = "violet" | "cyan" | "amber" | "rose" | "blue";
 
 interface FeatureCardProps {
   icon: LucideIcon;
@@ -22,31 +22,27 @@ export default function FeatureCard({
   const colorClasses: Record<AccentColor, string> = {
     violet:
       "from-violet-500/20 to-violet-600/5 group-hover:from-violet-500/30 border-violet-500/20 group-hover:border-violet-500/40",
-    cyan: "from-violet-500/20 to-violet-600/5 group-hover:from-violet-500/30 border-violet-500/20 group-hover:border-violet-500/40",
+    cyan: "from-cyan-500/20 to-cyan-600/5 group-hover:from-cyan-500/30 border-cyan-500/20 group-hover:border-cyan-500/40",
     amber:
-      "from-violet-500/20 to-violet-600/5 group-hover:from-violet-500/30 border-violet-500/20 group-hover:border-violet-500/40",
-    violet:
-      "from-violet-500/20 to-violet-600/5 group-hover:from-violet-500/30 border-violet-500/20 group-hover:border-violet-500/40",
-    rose: "from-violet-500/20 to-violet-600/5 group-hover:from-violet-500/30 border-violet-500/20 group-hover:border-violet-500/40",
-    blue: "from-violet-500/20 to-violet-600/5 group-hover:from-violet-500/30 border-violet-500/20 group-hover:border-violet-500/40",
+      "from-amber-500/20 to-amber-600/5 group-hover:from-amber-500/30 border-amber-500/20 group-hover:border-amber-500/40",
+    rose: "from-rose-500/20 to-rose-600/5 group-hover:from-rose-500/30 border-rose-500/20 group-hover:border-rose-500/40",
+    blue: "from-blue-500/20 to-blue-600/5 group-hover:from-blue-500/30 border-blue-500/20 group-hover:border-blue-500/40",
   };
 
   const iconColors: Record<AccentColor, string> = {
     violet: "text-violet-400 group-hover:text-violet-300",
-    cyan: "text-violet-400 group-hover:text-violet-300",
-    amber: "text-violet-400 group-hover:text-violet-300",
-    violet: "text-violet-400 group-hover:text-violet-300",
-    rose: "text-violet-400 group-hover:text-violet-300",
-    blue: "text-violet-400 group-hover:text-violet-300",
+    cyan: "text-cyan-400 group-hover:text-cyan-300",
+    amber: "text-amber-400 group-hover:text-amber-300",
+    rose: "text-rose-400 group-hover:text-rose-300",
+    blue: "text-blue-400 group-hover:text-blue-300",
   };
 
   const glowColors: Record<AccentColor, string> = {
     violet: "group-hover:shadow-violet-500/20",
-    cyan: "group-hover:shadow-violet-500/20",
-    amber: "group-hover:shadow-violet-500/20",
-    violet: "group-hover:shadow-violet-500/20",
-    rose: "group-hover:shadow-violet-500/20",
-    blue: "group-hover:shadow-violet-500/20",
+    cyan: "group-hover:shadow-cyan-500/20",
+    amber: "group-hover:shadow-amber-500/20",
+    rose: "group-hover:shadow-rose-500/20",
+    blue: "group-hover:shadow-blue-500/20",
   };
 
   return (

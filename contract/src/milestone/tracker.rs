@@ -11,6 +11,8 @@ use crate::milestone::types::{
     MilestoneRejectedEvent, MilestoneStatus, MilestoneStatusChangedEvent, MilestoneSubmittedEvent,
     Project, ProjectCreatedEvent, ProjectStatus, ProjectStatusChangedEvent,
 };
+use crate::dispute::storage as dispute_storage;
+use crate::dispute::types::DisputeReference;
 use crate::treasury::execute_milestone_payment;
 
 fn assert_project_active(project: &Project, env: &Env) {
@@ -436,6 +438,10 @@ fn release_milestone_payment_internal(
     project: &mut Project,
     milestone: &mut Milestone,
 ) -> bool {
+    if dispute_storage::is_reference_locked(env, &DisputeReference::Milestone, milestone.id) {
+        panic!("milestone is in active dispute");
+    }
+
     if milestone.status != MilestoneStatus::Approved {
         panic!("milestone not approved");
     }

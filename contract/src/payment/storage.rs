@@ -1,5 +1,5 @@
-use soroban_sdk::{contracttype, Address, Env, Map, Vec};
-use crate::payment::types::{PaymentPool, Recipient, DistributionStatus};
+use crate::payment::types::{DistributionStatus, PaymentPool, Recipient};
+use soroban_sdk::{contracttype, Address, Env, Vec};
 
 /// Storage key for the next pool ID counter
 #[contracttype]
@@ -10,34 +10,54 @@ pub enum PaymentStorageKey {
 }
 
 /// Initialize payment distribution storage
+#[allow(dead_code)]
 pub fn initialize_payment_storage(env: &Env) {
-    if !env.storage().persistent().has(&PaymentStorageKey::NextPoolId) {
-        env.storage().persistent().set(&PaymentStorageKey::NextPoolId, &1u64);
+    if !env
+        .storage()
+        .persistent()
+        .has(&PaymentStorageKey::NextPoolId)
+    {
+        env.storage()
+            .persistent()
+            .set(&PaymentStorageKey::NextPoolId, &1u64);
     }
 }
 
 /// Get the next available pool ID and increment the counter
 pub fn get_next_pool_id(env: &Env) -> u64 {
-    let mut next_id: u64 = env.storage().persistent().get(&PaymentStorageKey::NextPoolId).unwrap_or(1);
+    let mut next_id: u64 = env
+        .storage()
+        .persistent()
+        .get(&PaymentStorageKey::NextPoolId)
+        .unwrap_or(1);
     let current_id = next_id;
     next_id += 1;
-    env.storage().persistent().set(&PaymentStorageKey::NextPoolId, &next_id);
+    env.storage()
+        .persistent()
+        .set(&PaymentStorageKey::NextPoolId, &next_id);
     current_id
 }
 
 /// Store a payment pool
 pub fn store_payment_pool(env: &Env, pool: &PaymentPool) {
-    env.storage().persistent().set(&PaymentStorageKey::Pool(pool.id), pool);
+    env.storage()
+        .persistent()
+        .set(&PaymentStorageKey::Pool(pool.id), pool);
 }
 
 /// Get a payment pool by ID
 pub fn get_payment_pool(env: &Env, pool_id: u64) -> Option<PaymentPool> {
-    env.storage().persistent().get(&PaymentStorageKey::Pool(pool_id))
+    env.storage()
+        .persistent()
+        .get(&PaymentStorageKey::Pool(pool_id))
 }
 
 /// Check if a pool exists
+#[allow(dead_code)]
 pub fn pool_exists(env: &Env, pool_id: u64) -> bool {
-    env.storage().persistent().has(&PaymentStorageKey::Pool(pool_id))
+    env.storage()
+        .persistent()
+        .has(&PaymentStorageKey::Pool(pool_id))
 }
 
 /// Update pool status
@@ -51,7 +71,11 @@ pub fn update_pool_status(env: &Env, pool_id: u64, status: DistributionStatus) {
 /// Add a recipient to a pool
 pub fn add_recipient_to_pool(env: &Env, pool_id: u64, recipient: &Recipient) {
     let key = PaymentStorageKey::Recipients(pool_id);
-    let mut recipients: Vec<Recipient> = env.storage().persistent().get(&key).unwrap_or(Vec::new(env));
+    let mut recipients: Vec<Recipient> = env
+        .storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env));
     recipients.push_back(recipient.clone());
     env.storage().persistent().set(&key, &recipients);
 }
@@ -59,7 +83,10 @@ pub fn add_recipient_to_pool(env: &Env, pool_id: u64, recipient: &Recipient) {
 /// Get all recipients for a pool
 pub fn get_pool_recipients(env: &Env, pool_id: u64) -> Vec<Recipient> {
     let key = PaymentStorageKey::Recipients(pool_id);
-    env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env))
 }
 
 /// Check if a recipient already exists in a pool
@@ -80,7 +107,12 @@ pub fn clear_pool_recipients(env: &Env, pool_id: u64) {
 }
 
 /// Get total number of pools created
+#[allow(dead_code)]
 pub fn get_total_pools(env: &Env) -> u64 {
-    let next_id: u64 = env.storage().persistent().get(&PaymentStorageKey::NextPoolId).unwrap_or(1);
+    let next_id: u64 = env
+        .storage()
+        .persistent()
+        .get(&PaymentStorageKey::NextPoolId)
+        .unwrap_or(1);
     next_id.saturating_sub(1)
 }

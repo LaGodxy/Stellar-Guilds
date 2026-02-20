@@ -15,9 +15,7 @@ pub fn get_next_dispute_id(env: &Env) -> u64 {
         .get(&DISPUTE_COUNTER_KEY)
         .unwrap_or(0u64);
     let next = current + 1;
-    env.storage()
-        .persistent()
-        .set(&DISPUTE_COUNTER_KEY, &next);
+    env.storage().persistent().set(&DISPUTE_COUNTER_KEY, &next);
     next
 }
 
@@ -77,7 +75,11 @@ pub fn get_vote(env: &Env, dispute_id: u64, voter: &Address) -> Option<Vote> {
 }
 
 /// Check whether a reference is locked by an active dispute.
-pub fn is_reference_locked(env: &Env, reference_type: &DisputeReference, reference_id: u64) -> bool {
+pub fn is_reference_locked(
+    env: &Env,
+    reference_type: &DisputeReference,
+    reference_id: u64,
+) -> bool {
     let locks: Map<(DisputeReference, u64), u64> = env
         .storage()
         .persistent()

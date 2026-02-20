@@ -1,10 +1,14 @@
-use soroban_sdk::{Address, Env, String, Symbol};
+use soroban_sdk::{Address, Env, Symbol};
 
-use crate::governance::storage::{get_all_votes, get_config, get_delegate, get_proposal as load_proposal, get_vote, set_delegation, store_proposal, store_vote, remove_delegation};
-use crate::governance::types::{Proposal, ProposalFinalizedEvent, ProposalStatus, Vote, VoteCastEvent, VoteDecision};
-use crate::guild::storage as guild_storage;
-use crate::guild::types::Role;
+use crate::governance::storage::{
+    get_all_votes, get_config, get_delegate, get_proposal as load_proposal, remove_delegation,
+    set_delegation, store_proposal, store_vote,
+};
 use crate::governance::types::role_weight;
+use crate::governance::types::{
+    Proposal, ProposalFinalizedEvent, ProposalStatus, Vote, VoteCastEvent, VoteDecision,
+};
+use crate::guild::storage as guild_storage;
 
 const EVENT_TOPIC_VOTE_CAST: &str = "vote_cast";
 const EVENT_TOPIC_VOTE_DELEGATED: &str = "vote_delegated";
@@ -30,8 +34,6 @@ fn resolve_delegate(env: &Env, guild_id: u64, addr: &Address) -> Address {
 fn compute_total_weight_and_tallies(env: &Env, proposal: &Proposal) -> (i128, i128, i128, i128) {
     // returns (total_votes_weight, for_weight, against_weight, abstain_weight)
     let votes_map = get_all_votes(env, proposal.id);
-    let cfg = get_config(env, proposal.guild_id);
-
     let members = guild_storage::get_all_members(env, proposal.guild_id);
 
     let mut total_votes_weight: i128 = 0;
@@ -59,13 +61,18 @@ fn compute_total_weight_and_tallies(env: &Env, proposal: &Proposal) -> (i128, i1
         }
     }
 
-    (total_votes_weight, for_weight, against_weight, abstain_weight)
+    (
+        total_votes_weight,
+        for_weight,
+        against_weight,
+        abstain_weight,
+    )
 }
 
 pub fn vote(env: &Env, proposal_id: u64, voter: Address, decision: VoteDecision) -> bool {
     voter.require_auth();
 
-    let mut proposal = load_proposal(env, proposal_id).unwrap_or_else(|| panic!("proposal not found"));
+    let proposal = load_proposal(env, proposal_id).unwrap_or_else(|| panic!("proposal not found"));
 
     if !matches!(proposal.status, ProposalStatus::Active) {
         panic!("proposal not active");
@@ -98,7 +105,10 @@ pub fn vote(env: &Env, proposal_id: u64, voter: Address, decision: VoteDecision)
         decision,
     };
     env.events().publish(
-        (Symbol::new(env, EVENT_TOPIC_VOTE_CAST), Symbol::new(env, "v0")),
+        (
+            Symbol::new(env, EVENT_TOPIC_VOTE_CAST),
+            Symbol::new(env, "v0"),
+        ),
         event,
     );
 
@@ -142,7 +152,10 @@ pub fn delegate_vote(env: &Env, guild_id: u64, delegator: Address, delegate: Add
         delegate,
     };
     env.events().publish(
-        (Symbol::new(env, EVENT_TOPIC_VOTE_DELEGATED), Symbol::new(env, "v0")),
+        (
+            Symbol::new(env, EVENT_TOPIC_VOTE_DELEGATED),
+            Symbol::new(env, "v0"),
+        ),
         event,
     );
 
@@ -154,9 +167,15 @@ pub fn undelegate_vote(env: &Env, guild_id: u64, delegator: Address) -> bool {
 
     remove_delegation(env, guild_id, &delegator);
 
-    let event = crate::governance::types::VoteUndelegatedEvent { guild_id, delegator };
+    let event = crate::governance::types::VoteUndelegatedEvent {
+        guild_id,
+        delegator,
+    };
     env.events().publish(
-        (Symbol::new(env, EVENT_TOPIC_VOTE_UNDELEGATED), Symbol::new(env, "v0")),
+        (
+            Symbol::new(env, EVENT_TOPIC_VOTE_UNDELEGATED),
+            Symbol::new(env, "v0"),
+        ),
         event,
     );
 
@@ -164,7 +183,8 @@ pub fn undelegate_vote(env: &Env, guild_id: u64, delegator: Address) -> bool {
 }
 
 pub fn finalize_proposal(env: &Env, proposal_id: u64) -> ProposalStatus {
-    let mut proposal = load_proposal(env, proposal_id).unwrap_or_else(|| panic!("proposal not found"));
+    let mut proposal =
+        load_proposal(env, proposal_id).unwrap_or_else(|| panic!("proposal not found"));
 
     if !matches!(proposal.status, ProposalStatus::Active) {
         return proposal.status;
@@ -221,7 +241,10 @@ pub fn finalize_proposal(env: &Env, proposal_id: u64) -> ProposalStatus {
         votes_abstain: proposal.votes_abstain,
     };
     env.events().publish(
-        (Symbol::new(env, EVENT_TOPIC_PROPOSAL_FINALIZED), Symbol::new(env, "v0")),
+        (
+            Symbol::new(env, EVENT_TOPIC_PROPOSAL_FINALIZED),
+            Symbol::new(env, "v0"),
+        ),
         event,
     );
 

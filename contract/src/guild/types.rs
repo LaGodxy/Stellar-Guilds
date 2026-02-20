@@ -20,7 +20,9 @@ impl Role {
     pub fn has_permission(&self, required_role: &Role) -> bool {
         match (self, required_role) {
             (Role::Owner, _) => true,
-            (Role::Admin, Role::Admin) | (Role::Admin, Role::Member) | (Role::Admin, Role::Contributor) => true,
+            (Role::Admin, Role::Admin)
+            | (Role::Admin, Role::Member)
+            | (Role::Admin, Role::Contributor) => true,
             (Role::Member, Role::Member) | (Role::Member, Role::Contributor) => true,
             (Role::Contributor, Role::Contributor) => true,
             _ => false,

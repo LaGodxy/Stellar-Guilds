@@ -6,7 +6,7 @@
 //! NOTE: Payment release tests are excluded as they require treasury integration.
 
 use crate::guild::types::Role;
-use crate::milestone::types::{MilestoneInput, MilestoneStatus, ProjectStatus};
+use crate::milestone::types::{MilestoneInput, MilestoneStatus};
 use crate::StellarGuildsContract;
 use crate::StellarGuildsContractClient;
 use soroban_sdk::testutils::{Address as _, Ledger, LedgerInfo};
@@ -48,7 +48,7 @@ fn setup_guild(client: &StellarGuildsContractClient<'_>, env: &Env, owner: &Addr
 
 fn add_admin(
     client: &StellarGuildsContractClient<'_>,
-    env: &Env,
+    _env: &Env,
     guild_id: u64,
     owner: &Address,
     admin: &Address,
@@ -466,8 +466,7 @@ fn test_approve_milestone_success() {
     let guild_id = setup_guild(&client, &env, &owner);
     add_admin(&client, &env, guild_id, &owner, &admin);
 
-    let treasury_id =
-        create_treasury_with_funds(&client, &env, guild_id, &owner, 5000i128);
+    let treasury_id = create_treasury_with_funds(&client, &env, guild_id, &owner, 5000i128);
 
     let now = env.ledger().timestamp();
     let mut milestones: Vec<MilestoneInput> = Vec::new(&env);
@@ -768,8 +767,7 @@ fn test_sequential_allows_second_after_first_approved() {
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
     let guild_id = setup_guild(&client, &env, &owner);
-    let treasury_id =
-        create_treasury_with_funds(&client, &env, guild_id, &owner, 5000i128);
+    let treasury_id = create_treasury_with_funds(&client, &env, guild_id, &owner, 5000i128);
 
     let now = env.ledger().timestamp();
     let mut milestones: Vec<MilestoneInput> = Vec::new(&env);
@@ -885,8 +883,7 @@ fn test_progress_calculation() {
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
     let guild_id = setup_guild(&client, &env, &owner);
-    let treasury_id =
-        create_treasury_with_funds(&client, &env, guild_id, &owner, 10000i128);
+    let treasury_id = create_treasury_with_funds(&client, &env, guild_id, &owner, 10000i128);
 
     let now = env.ledger().timestamp();
     let mut milestones: Vec<MilestoneInput> = Vec::new(&env);

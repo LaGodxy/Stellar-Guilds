@@ -538,6 +538,7 @@ pub fn get_guild_bounties_list(env: &Env, guild_id: u64) -> Vec<Bounty> {
 }
 
 // Legacy function name for compatibility
+#[allow(dead_code)]
 pub fn cancel_bounty_auth(env: &Env, bounty_id: u64, canceller: Address) -> bool {
     cancel_bounty(env, bounty_id, canceller)
 }

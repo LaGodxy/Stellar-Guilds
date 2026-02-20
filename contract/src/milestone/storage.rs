@@ -11,6 +11,7 @@ pub enum MilestoneStorageKey {
     ProjectMilestones(u64), // Vec<milestone_id>
 }
 
+#[allow(dead_code)]
 pub fn initialize_milestone_storage(env: &Env) {
     let storage = env.storage().persistent();
     if !storage.has(&MilestoneStorageKey::NextProjectId) {
@@ -75,12 +76,19 @@ pub fn get_milestone(env: &Env, milestone_id: u64) -> Option<Milestone> {
 
 pub fn append_milestone_to_project(env: &Env, project_id: u64, milestone_id: u64) {
     let key = MilestoneStorageKey::ProjectMilestones(project_id);
-    let mut ids: Vec<u64> = env.storage().persistent().get(&key).unwrap_or(Vec::new(env));
+    let mut ids: Vec<u64> = env
+        .storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env));
     ids.push_back(milestone_id);
     env.storage().persistent().set(&key, &ids);
 }
 
 pub fn get_project_milestone_ids(env: &Env, project_id: u64) -> Vec<u64> {
     let key = MilestoneStorageKey::ProjectMilestones(project_id);
-    env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env))
 }

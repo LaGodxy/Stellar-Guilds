@@ -68,8 +68,8 @@ pub fn create_dispute(
             (DisputeReference::Bounty, b.guild_id)
         }
         (None, Some(m)) => {
-            let project = milestone_storage::get_project(env, m.project_id)
-                .expect("project not found");
+            let project =
+                milestone_storage::get_project(env, m.project_id).expect("project not found");
             if project.status == ProjectStatus::Cancelled {
                 panic!("project cancelled");
             }
@@ -131,12 +131,7 @@ pub fn create_dispute(
 ///
 /// Evidence can only be submitted by the plaintiff or defendant
 /// during the active voting window.
-pub fn submit_evidence(
-    env: &Env,
-    dispute_id: u64,
-    party: Address,
-    evidence_url: String,
-) -> bool {
+pub fn submit_evidence(env: &Env, dispute_id: u64, party: Address, evidence_url: String) -> bool {
     party.require_auth();
 
     if evidence_url.len() == 0 || evidence_url.len() > MAX_EVIDENCE_LEN {
@@ -163,10 +158,7 @@ pub fn submit_evidence(
 
     dispute_storage::store_dispute(env, &dispute);
 
-    let event = EvidenceSubmittedEvent {
-        dispute_id,
-        party,
-    };
+    let event = EvidenceSubmittedEvent { dispute_id, party };
     env.events().publish(("DisputeEvidence",), event);
 
     true

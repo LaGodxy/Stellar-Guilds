@@ -3,7 +3,6 @@
 use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
 mod guild;
-
 use guild::membership::{
     add_member, create_guild, get_all_members, get_member, has_permission, is_member,
     remove_member, update_role,
@@ -14,11 +13,10 @@ use guild::types::{Member, Role};
 mod bounty;
 use bounty::{
     approve_completion, cancel_bounty, claim_bounty, create_bounty, expire_bounty, fund_bounty,
-    get_bounty_data, get_guild_bounties_list, release_escrow, submit_work, Bounty, BountyStatus,
+    get_bounty_data, get_guild_bounties_list, release_escrow, submit_work, Bounty,
 };
 
 mod treasury;
-use treasury::initialize_treasury_storage;
 use treasury::{
     approve_transaction as core_approve_transaction, deposit as core_deposit,
     emergency_pause as core_emergency_pause, execute_transaction as core_execute_transaction,
@@ -44,8 +42,7 @@ use milestone::{
     extend_milestone_deadline as ms_extend_deadline, get_milestone_view as ms_get_milestone,
     get_project_progress as ms_get_progress, reject_milestone as ms_reject_milestone,
     release_milestone_payment as ms_release_payment, start_milestone as ms_start_milestone,
-    submit_milestone as ms_submit_milestone, Milestone, MilestoneInput, MilestoneStatus, Project,
-    ProjectStatus,
+    submit_milestone as ms_submit_milestone, Milestone, MilestoneInput,
 };
 
 mod payment;
@@ -63,6 +60,44 @@ use dispute::{
     create_dispute as dispute_create_dispute, execute_resolution as dispute_execute_resolution,
     resolve_dispute as dispute_resolve_dispute, submit_evidence as dispute_submit_evidence,
     tally_votes as dispute_tally_votes,
+};
+
+mod multisig;
+use multisig::{
+    // Registrar aliases to prevent recursive naming collisions
+    ms_add_signer as internal_add_signer,
+    // Signing aliases
+    ms_cancel_operation as internal_cancel_operation,
+    ms_check_and_expire as internal_check_and_expire,
+    ms_emergency_expire_operation as internal_emergency_expire_operation,
+    ms_emergency_extend_timeout as internal_emergency_extend_timeout,
+    ms_execute_operation as internal_execute_operation,
+    ms_freeze_account as internal_freeze_account,
+    // Policy aliases
+    ms_get_operation_policy as internal_get_operation_policy,
+    ms_get_operation_status as internal_get_operation_status,
+    ms_get_pending_operations as internal_get_pending_operations,
+    ms_get_safe_account as internal_get_safe_account,
+    ms_list_accounts_by_owner as internal_list_accounts_by_owner,
+    ms_propose_operation as internal_propose_operation,
+    ms_register_account as internal_register_account,
+    ms_remove_signer as internal_remove_signer,
+    ms_require_executed_operation as internal_require_executed_operation,
+    ms_reset_operation_policy as internal_reset_operation_policy,
+    ms_rotate_signer as internal_rotate_signer,
+    ms_set_operation_policy as internal_set_operation_policy,
+
+    ms_sign_operation as internal_sign_operation,
+    ms_sweep_expired_operations as internal_sweep_expired_operations,
+
+    ms_unfreeze_account as internal_unfreeze_account,
+    ms_update_threshold as internal_update_threshold,
+
+    // Types
+    MultiSigAccount,
+    MultiSigOperation,
+    OperationPolicy,
+    OperationType,
 };
 
 /// Stellar Guilds - Main Contract Entry Point
@@ -268,7 +303,6 @@ impl StellarGuildsContract {
         match pay_add_recipient(&env, pool_id, recipient, share, caller) {
             Ok(result) => result,
             Err(e) => {
-                // Convert error enum to panic message
                 let msg = match e as u32 {
                     1 => "PoolNotFound",
                     2 => "PoolNotPending",
@@ -444,7 +478,14 @@ impl StellarGuildsContract {
         reason: String,
         evidence_url: String,
     ) -> u64 {
-        dispute_create_dispute(&env, reference_id, plaintiff, defendant, reason, evidence_url)
+        dispute_create_dispute(
+            &env,
+            reference_id,
+            plaintiff,
+            defendant,
+            reason,
+            evidence_url,
+        )
     }
 
     /// Submit evidence for an active dispute
@@ -468,19 +509,12 @@ impl StellarGuildsContract {
     }
 
     /// Calculate voting weight for a guild member
-    pub fn calculate_dispute_vote_weight(
-        env: Env,
-        guild_id: u64,
-        voter: Address,
-    ) -> u32 {
+    pub fn calculate_dispute_vote_weight(env: Env, guild_id: u64, voter: Address) -> u32 {
         dispute_calculate_vote_weight(&env, guild_id, voter)
     }
 
     /// Tally votes for a dispute
-    pub fn tally_dispute_votes(
-        env: Env,
-        dispute_id: u64,
-    ) -> dispute::types::Resolution {
+    pub fn tally_dispute_votes(env: Env, dispute_id: u64) -> dispute::types::Resolution {
         dispute_tally_votes(&env, dispute_id)
     }
 
@@ -977,11 +1011,12 @@ impl StellarGuildsContract {
     ///
     /// # Arguments
     /// * `proposal_id` - The ID of the proposal to execute
+    /// * `executor` - Address executing the proposal
     ///
     /// # Returns
     /// `true` if execution was successful
-    pub fn execute_proposal(env: Env, proposal_id: u64) -> bool {
-        gov_execute_proposal(&env, proposal_id)
+    pub fn execute_proposal(env: Env, proposal_id: u64, executor: Address) -> bool {
+        gov_execute_proposal(&env, proposal_id, executor)
     }
 
     /// Cancel a proposal
@@ -1154,6 +1189,292 @@ impl StellarGuildsContract {
     /// Vector of all bounties belonging to the guild
     pub fn get_guild_bounties(env: Env, guild_id: u64) -> Vec<Bounty> {
         get_guild_bounties_list(&env, guild_id)
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  Multi-Signature Framework
+    //  Provides M-of-N signing, configurable policies, and emergency controls.
+    // ════════════════════════════════════════════════════════════════════════
+
+    /// Register a new multi-signature safe account.
+    pub fn ms_register_account(
+        env: Env,
+        owner: Address,
+        signers: Vec<Address>,
+        threshold: u32,
+        guild_id: Option<u64>,
+        timeout_seconds: u64,
+    ) -> u64 {
+        match internal_register_account(&env, owner, signers, threshold, guild_id, timeout_seconds)
+        {
+            Ok(id) => id,
+            Err(e) => panic!("ms_register_account error: {}", e as u32),
+        }
+    }
+
+    /// Add a new signer to a multi-sig account (owner only).
+    pub fn ms_add_signer(env: Env, account_id: u64, new_signer: Address, caller: Address) -> bool {
+        match internal_add_signer(&env, account_id, new_signer, caller) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_add_signer error: {}", e as u32),
+        }
+    }
+
+    /// Remove a signer from a multi-sig account (owner only).
+    pub fn ms_remove_signer(
+        env: Env,
+        account_id: u64,
+        signer: Address,
+        caller: Address,
+        new_threshold: u32,
+    ) -> bool {
+        match internal_remove_signer(&env, account_id, signer, caller, new_threshold) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_remove_signer error: {}", e as u32),
+        }
+    }
+
+    /// Atomically replace a compromised signer key with a new one (owner only).
+    pub fn ms_rotate_signer(
+        env: Env,
+        account_id: u64,
+        old_signer: Address,
+        new_signer: Address,
+        caller: Address,
+    ) -> bool {
+        match internal_rotate_signer(&env, account_id, old_signer, new_signer, caller) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_rotate_signer error: {}", e as u32),
+        }
+    }
+
+    /// Update the signing threshold for an account (owner only).
+    pub fn ms_update_threshold(
+        env: Env,
+        account_id: u64,
+        new_threshold: u32,
+        caller: Address,
+    ) -> bool {
+        match internal_update_threshold(&env, account_id, new_threshold, caller) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_update_threshold error: {}", e as u32),
+        }
+    }
+
+    /// Freeze a multi-sig account, blocking all new operations (owner only).
+    pub fn ms_freeze_account(env: Env, account_id: u64, caller: Address) -> bool {
+        match internal_freeze_account(&env, account_id, caller) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_freeze_account error: {}", e as u32),
+        }
+    }
+
+    /// Unfreeze a previously frozen account (owner only).
+    pub fn ms_unfreeze_account(env: Env, account_id: u64, caller: Address) -> bool {
+        match internal_unfreeze_account(&env, account_id, caller) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_unfreeze_account error: {}", e as u32),
+        }
+    }
+
+    /// Retrieve a multi-sig account by ID.
+    pub fn ms_get_account(env: Env, account_id: u64) -> MultiSigAccount {
+        match internal_get_safe_account(&env, account_id) {
+            Ok(a) => a,
+            Err(e) => panic!("ms_get_account error: {}", e as u32),
+        }
+    }
+
+    /// List all multi-sig accounts owned by a given address.
+    pub fn ms_list_accounts(env: Env, owner: Address) -> Vec<MultiSigAccount> {
+        internal_list_accounts_by_owner(&env, owner)
+    }
+
+    // ─── Multi-Sig Operations ─────────────────────────────────────────────
+
+    /// Propose a new operation requiring multi-sig approval.
+    pub fn ms_propose_operation(
+        env: Env,
+        account_id: u64,
+        operation_type: OperationType,
+        description: String,
+        proposer: Address,
+    ) -> u64 {
+        match internal_propose_operation(&env, account_id, operation_type, description, proposer) {
+            Ok(id) => id,
+            Err(e) => panic!("ms_propose_operation error: {}", e as u32),
+        }
+    }
+
+    /// Submit a signature for a pending operation.
+    pub fn ms_sign_operation(env: Env, operation_id: u64, signer: Address) -> u32 {
+        match internal_sign_operation(&env, operation_id, signer) {
+            Ok(n) => n,
+            Err(e) => panic!("ms_sign_operation error: {}", e as u32),
+        }
+    }
+
+    /// Execute a fully-signed operation.
+    pub fn ms_execute_operation(env: Env, operation_id: u64, executor: Address) -> bool {
+        match internal_execute_operation(&env, operation_id, executor) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_execute_operation error: {}", e as u32),
+        }
+    }
+
+    /// Execute a treasury withdrawal proposal only after a multisig treasury operation is executed.
+    /// This preserves backward compatibility while enabling strict multisig-gated flows.
+    pub fn ms_propose_treasury_withdrawal(
+        env: Env,
+        multisig_operation_id: u64,
+        treasury_id: u64,
+        proposer: Address,
+        recipient: Address,
+        amount: i128,
+        token: Option<Address>,
+        reason: String,
+    ) -> u64 {
+        if let Err(e) = internal_require_executed_operation(
+            &env,
+            multisig_operation_id,
+            OperationType::TreasuryWithdrawal,
+        ) {
+            panic!("ms_propose_treasury_withdrawal gate error: {}", e as u32);
+        }
+
+        core_propose_withdrawal(
+            &env,
+            treasury_id,
+            proposer,
+            recipient,
+            amount,
+            token,
+            reason,
+        )
+    }
+
+    /// Execute a governance proposal only after an executed governance multisig operation.
+    pub fn ms_execute_governance_proposal(
+        env: Env,
+        multisig_operation_id: u64,
+        proposal_id: u64,
+        executor: Address,
+    ) -> bool {
+        if let Err(e) = internal_require_executed_operation(
+            &env,
+            multisig_operation_id,
+            OperationType::GovernanceUpdate,
+        ) {
+            panic!("ms_execute_governance_proposal gate error: {}", e as u32);
+        }
+        gov_execute_proposal(&env, proposal_id, executor)
+    }
+
+    /// Cancel a pending operation (proposer or account owner only).
+    pub fn ms_cancel_operation(env: Env, operation_id: u64, caller: Address) -> bool {
+        match internal_cancel_operation(&env, operation_id, caller) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_cancel_operation error: {}", e as u32),
+        }
+    }
+
+    /// Lazily check and mark a single operation as expired if its timeout passed.
+    pub fn ms_check_and_expire(env: Env, operation_id: u64) -> bool {
+        match internal_check_and_expire(&env, operation_id) {
+            Ok(expired) => expired,
+            Err(e) => panic!("ms_check_and_expire error: {}", e as u32),
+        }
+    }
+
+    /// Sweep all pending operations for an account and expire timed-out ones.
+    pub fn ms_sweep_expired(env: Env, account_id: u64) -> u32 {
+        internal_sweep_expired_operations(&env, account_id)
+    }
+
+    /// Retrieve the full state of an operation (with lazy expiry applied).
+    pub fn ms_get_operation(env: Env, operation_id: u64) -> MultiSigOperation {
+        match internal_get_operation_status(&env, operation_id) {
+            Ok(op) => op,
+            Err(e) => panic!("ms_get_operation error: {}", e as u32),
+        }
+    }
+
+    /// List all currently pending (non-expired) operations for an account.
+    pub fn ms_get_pending_ops(env: Env, account_id: u64) -> Vec<MultiSigOperation> {
+        internal_get_pending_operations(&env, account_id)
+    }
+
+    // ─── Emergency Controls ───────────────────────────────────────────────
+
+    /// Extend or shorten the expiry of a pending operation (owner only).
+    pub fn ms_emergency_extend_timeout(
+        env: Env,
+        operation_id: u64,
+        new_timeout_seconds: u64,
+        owner: Address,
+    ) -> bool {
+        match internal_emergency_extend_timeout(&env, operation_id, new_timeout_seconds, owner) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_emergency_extend_timeout error: {}", e as u32),
+        }
+    }
+
+    /// Immediately expire a pending operation (owner-only kill-switch).
+    pub fn ms_emergency_expire(env: Env, operation_id: u64, owner: Address) -> bool {
+        match internal_emergency_expire_operation(&env, operation_id, owner) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_emergency_expire error: {}", e as u32),
+        }
+    }
+
+    // ─── Policy Management ────────────────────────────────────────────────
+
+    /// Set a custom signing policy for a specific operation type (owner only).
+    pub fn ms_set_policy(
+        env: Env,
+        account_id: u64,
+        operation_type: OperationType,
+        min_signatures: u32,
+        require_all_signers: bool,
+        timeout_seconds: u64,
+        require_owner_signature: bool,
+        caller: Address,
+    ) -> bool {
+        match internal_set_operation_policy(
+            &env,
+            account_id,
+            operation_type,
+            min_signatures,
+            require_all_signers,
+            timeout_seconds,
+            require_owner_signature,
+            caller,
+        ) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_set_policy error: {}", e as u32),
+        }
+    }
+
+    /// Get the effective policy for an operation type (returns default if none set).
+    pub fn ms_get_policy(
+        env: Env,
+        account_id: u64,
+        operation_type: OperationType,
+    ) -> OperationPolicy {
+        internal_get_operation_policy(&env, account_id, operation_type)
+    }
+
+    /// Reset a policy back to its secure defaults (owner only).
+    pub fn ms_reset_policy(
+        env: Env,
+        account_id: u64,
+        operation_type: OperationType,
+        caller: Address,
+    ) -> bool {
+        match internal_reset_operation_policy(&env, account_id, operation_type, caller) {
+            Ok(()) => true,
+            Err(e) => panic!("ms_reset_policy error: {}", e as u32),
+        }
     }
 }
 
@@ -1370,7 +1691,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_add_admin_by_non_owner() {
-        let (env, owner, admin, member, _) = setup();
+        let (env, owner, _admin, member, _) = setup();
         let contract_id = register_and_init_contract(&env);
         let client = StellarGuildsContractClient::new(&env, &contract_id);
 
@@ -1496,7 +1817,6 @@ mod tests {
         let client = StellarGuildsContractClient::new(&env, &contract_id);
 
         env.mock_all_auths();
-        env.mock_all_auths();
 
         let name = String::from_str(&env, "Guild");
         let description = String::from_str(&env, "Description");
@@ -1544,7 +1864,6 @@ mod tests {
         let client = StellarGuildsContractClient::new(&env, &contract_id);
 
         env.mock_all_auths();
-        env.mock_all_auths();
 
         let name = String::from_str(&env, "Guild");
         let description = String::from_str(&env, "Description");
@@ -1560,7 +1879,7 @@ mod tests {
 
     #[test]
     fn test_can_demote_owner_if_multiple() {
-        let (env, owner1, owner2, member, _) = setup();
+        let (env, owner1, owner2, _member, _) = setup();
         let contract_id = register_and_init_contract(&env);
         let client = StellarGuildsContractClient::new(&env, &contract_id);
 
@@ -1588,7 +1907,6 @@ mod tests {
         let client = StellarGuildsContractClient::new(&env, &contract_id);
 
         env.mock_all_auths();
-        env.mock_all_auths();
 
         let name = String::from_str(&env, "Guild");
         let description = String::from_str(&env, "Description");
@@ -1609,7 +1927,6 @@ mod tests {
         let contract_id = register_and_init_contract(&env);
         let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-        env.mock_all_auths();
         env.mock_all_auths();
 
         let name = String::from_str(&env, "Guild");
@@ -1655,7 +1972,6 @@ mod tests {
         let contract_id = register_and_init_contract(&env);
         let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-        env.mock_all_auths();
         env.mock_all_auths();
 
         let name = String::from_str(&env, "Guild");
@@ -1780,7 +2096,7 @@ mod tests {
 
         // Verify all members exist
         let members = client.get_all_members(&guild_id);
-        assert_eq!(members.len(), 4); // owner + admin + member1 + member2
+        assert_eq!(members.len(), 4);
 
         // Promote member1 to member
         client.update_role(&guild_id, &member1, &Role::Member, &admin);
@@ -1857,9 +2173,8 @@ mod tests {
         client.initialize();
 
         let creator = Address::generate(&env);
-        let token = Some(Address::generate(&env)); // Mock token address
+        let token = Some(Address::generate(&env));
 
-        // Mock auth
         env.mock_all_auths();
 
         let pool_id =
@@ -1883,15 +2198,12 @@ mod tests {
 
         env.mock_all_auths();
 
-        // Create pool
         let pool_id =
             client.create_payment_pool(&1000i128, &token, &DistributionRule::Percentage, &creator);
 
-        // Add recipients
         client.add_recipient(&pool_id, &recipient1, &50u32, &creator);
         client.add_recipient(&pool_id, &recipient2, &50u32, &creator);
 
-        // Validate distribution
         let is_valid = client.validate_distribution(&pool_id);
         assert_eq!(is_valid, true);
     }
@@ -1911,16 +2223,13 @@ mod tests {
 
         env.mock_all_auths();
 
-        // Create pool
         let pool_id =
             client.create_payment_pool(&1000i128, &token, &DistributionRule::Percentage, &creator);
 
-        // Add recipient with 25% share
         client.add_recipient(&pool_id, &recipient, &25u32, &creator);
 
-        // Get recipient amount
         let amount = client.get_recipient_amount(&pool_id, &recipient);
-        assert_eq!(amount, 250i128); // 25% of 1000
+        assert_eq!(amount, 250i128);
     }
 
     #[test]
@@ -1940,21 +2249,17 @@ mod tests {
 
         env.mock_all_auths();
 
-        // Create pool
         let pool_id =
             client.create_payment_pool(&1000i128, &token, &DistributionRule::EqualSplit, &creator);
 
-        // Add recipients
-        client.add_recipient(&pool_id, &recipient1, &1u32, &creator); // share value doesn't matter for equal split
+        client.add_recipient(&pool_id, &recipient1, &1u32, &creator);
         client.add_recipient(&pool_id, &recipient2, &1u32, &creator);
         client.add_recipient(&pool_id, &recipient3, &1u32, &creator);
 
-        // Get recipient amounts
         let amount1 = client.get_recipient_amount(&pool_id, &recipient1);
         let amount2 = client.get_recipient_amount(&pool_id, &recipient2);
         let amount3 = client.get_recipient_amount(&pool_id, &recipient3);
 
-        // Each should get 1000 / 3 = 333 (integer division)
         assert_eq!(amount1, 333i128);
         assert_eq!(amount2, 333i128);
         assert_eq!(amount3, 333i128);
@@ -1974,15 +2279,12 @@ mod tests {
 
         env.mock_all_auths();
 
-        // Create pool
         let pool_id =
             client.create_payment_pool(&1000i128, &token, &DistributionRule::Percentage, &creator);
 
-        // Cancel pool
         let result = client.cancel_distribution(&pool_id, &creator);
         assert_eq!(result, true);
 
-        // Check status
         let status = client.get_pool_status(&pool_id);
         assert_eq!(status, DistributionStatus::Cancelled);
     }

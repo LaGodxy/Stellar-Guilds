@@ -10,8 +10,8 @@ use crate::treasury::storage::{
 };
 use crate::treasury::types::{
     Allowance, Budget, DepositEvent, EmergencyPauseEvent, Transaction, TransactionApprovedEvent,
-    TransactionExecutedEvent, TransactionStatus, TransactionType, Treasury,
-    TreasuryInitializedEvent, TreasuryError, WithdrawalProposedEvent,
+    TransactionExecutedEvent, TransactionStatus, TransactionType, Treasury, TreasuryError,
+    TreasuryInitializedEvent, WithdrawalProposedEvent,
 };
 
 pub fn initialize_treasury(
@@ -149,7 +149,7 @@ pub fn propose_withdrawal(
         panic!("amount must be positive");
     }
 
-    let mut treasury = get_treasury(env, treasury_id).expect("treasury not found");
+    let treasury = get_treasury(env, treasury_id).expect("treasury not found");
     if treasury.paused {
         panic!("treasury is paused");
     }
@@ -197,7 +197,7 @@ pub fn approve_transaction(env: &Env, tx_id: u64, approver: Address) -> bool {
     approver.require_auth();
 
     let mut tx = crate::treasury::storage::get_transaction(env, tx_id).expect("tx not found");
-    let mut treasury = get_treasury(env, tx.treasury_id).expect("treasury not found");
+    let treasury = get_treasury(env, tx.treasury_id).expect("treasury not found");
 
     let now = env.ledger().timestamp();
     expire_if_needed(&mut tx, now);
@@ -231,7 +231,12 @@ pub fn approve_transaction(env: &Env, tx_id: u64, approver: Address) -> bool {
     true
 }
 
-fn enforce_budget(env: &Env, treasury_id: u64, category: &String, amount: i128) -> Result<(), TreasuryError> {
+fn enforce_budget(
+    env: &Env,
+    treasury_id: u64,
+    category: &String,
+    amount: i128,
+) -> Result<(), TreasuryError> {
     if amount <= 0 {
         return Ok(());
     }
@@ -325,16 +330,16 @@ pub fn execute_transaction(env: &Env, tx_id: u64, executor: Address) -> bool {
             // Convert Result to panic with expected error message
             // This creates a proper contract error (all panics in Soroban become contract errors)
             // while maintaining the expected error message for test compatibility
-            enforce_budget(env, tx.treasury_id, &category, tx.amount)
-                .unwrap_or_else(|e| match e {
+            enforce_budget(env, tx.treasury_id, &category, tx.amount).unwrap_or_else(|e| match e {
+                TreasuryError::BudgetExceeded => panic!("budget exceeded"),
+                TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
+            });
+            enforce_allowance(env, tx.treasury_id, &executor, &tx.token, tx.amount).unwrap_or_else(
+                |e| match e {
                     TreasuryError::BudgetExceeded => panic!("budget exceeded"),
                     TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
-                });
-            enforce_allowance(env, tx.treasury_id, &executor, &tx.token, tx.amount)
-                .unwrap_or_else(|e| match e {
-                    TreasuryError::BudgetExceeded => panic!("budget exceeded"),
-                    TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
-                });
+                },
+            );
 
             match tx.token {
                 Some(ref token_addr) => {
@@ -405,20 +410,18 @@ pub fn execute_milestone_payment(
 
     // Budget enforcement under the "milestone" category
     let category = String::from_str(env, "milestone");
-    enforce_budget(env, treasury_id, &category, amount)
-        .unwrap_or_else(|e| match e {
-            TreasuryError::BudgetExceeded => panic!("budget exceeded"),
-            TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
-        });
+    enforce_budget(env, treasury_id, &category, amount).unwrap_or_else(|e| match e {
+        TreasuryError::BudgetExceeded => panic!("budget exceeded"),
+        TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
+    });
 
     // Allowance enforcement (if any) keyed by current contract address;
     // if no allowance exists this is a no-op.
     let executor = env.current_contract_address();
-    enforce_allowance(env, treasury_id, &executor, &token, amount)
-        .unwrap_or_else(|e| match e {
-            TreasuryError::BudgetExceeded => panic!("budget exceeded"),
-            TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
-        });
+    enforce_allowance(env, treasury_id, &executor, &token, amount).unwrap_or_else(|e| match e {
+        TreasuryError::BudgetExceeded => panic!("budget exceeded"),
+        TreasuryError::AllowanceExceeded => panic!("allowance exceeded"),
+    });
 
     // Move funds from treasury to recipient
     match token {

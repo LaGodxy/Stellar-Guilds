@@ -1,5 +1,5 @@
-use soroban_sdk::{Address, Env};
 use soroban_sdk::token::Client as TokenClient;
+use soroban_sdk::{Address, Env};
 
 /// Transfer funds from funder to contract
 pub fn lock_funds(env: &Env, token: &Address, funder: &Address, amount: i128) {

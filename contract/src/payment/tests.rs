@@ -7,7 +7,7 @@ use super::*;
 use crate::StellarGuildsContract;
 use crate::StellarGuildsContractClient;
 use soroban_sdk::testutils::Address as _;
-use soroban_sdk::{token, Address, Env, String, Vec};
+use soroban_sdk::{token, Address, Env, Vec};
 
 // ============ Test Helpers ============
 

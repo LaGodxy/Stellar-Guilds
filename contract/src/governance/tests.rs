@@ -50,7 +50,6 @@ mod tests {
 
         let guild_id = setup_guild(client, env, owner);
 
-        // add roles
         client.add_member(&guild_id, &admin, &Role::Admin, owner);
         client.add_member(&guild_id, &member, &Role::Member, owner);
         client.add_member(&guild_id, &contributor, &Role::Contributor, owner);
@@ -72,7 +71,6 @@ mod tests {
         let (guild_id, _admin, _member, _contributor) =
             setup_guild_with_members(&env, &client, &owner);
 
-        // owner creates proposal
         let proposal_id = client.create_proposal(
             &guild_id,
             &owner,
@@ -90,7 +88,7 @@ mod tests {
     }
 
     #[test]
-    fn test_vote_and_weights() {
+    fn test_vote_weights_and_execution() {
         let env = setup_env();
         let owner = Address::generate(&env);
 
@@ -103,7 +101,6 @@ mod tests {
         let (guild_id, admin, member, contributor) =
             setup_guild_with_members(&env, &client, &owner);
 
-        // owner creates proposal
         let proposal_id = client.create_proposal(
             &guild_id,
             &owner,
@@ -112,13 +109,11 @@ mod tests {
             &String::from_str(&env, "Description"),
         );
 
-        // voting: owner FOR, admin FOR, member AGAINST, contributor ABSTAIN
         client.vote(&proposal_id, &owner, &VoteDecision::For);
         client.vote(&proposal_id, &admin, &VoteDecision::For);
         client.vote(&proposal_id, &member, &VoteDecision::Against);
         client.vote(&proposal_id, &contributor, &VoteDecision::Abstain);
 
-        // fast-forward time to after voting_end
         let proposal = client.get_proposal(&proposal_id);
         let end = proposal.voting_end;
         set_ledger_timestamp(&env, end + 1);
@@ -126,15 +121,21 @@ mod tests {
         let status = client.finalize_proposal(&proposal_id);
         assert_eq!(status, ProposalStatus::Passed);
 
-        let proposal = client.get_proposal(&proposal_id);
-        // weights: owner 10 + admin 5 for FOR = 15; member AGAINST 2; contributor ABSTAIN 1
-        assert_eq!(proposal.votes_for, 15);
-        assert_eq!(proposal.votes_against, 2);
-        assert_eq!(proposal.votes_abstain, 1);
+        let proposal_after_finalize = client.get_proposal(&proposal_id);
+        assert_eq!(proposal_after_finalize.votes_for, 15);
+        assert_eq!(proposal_after_finalize.votes_against, 2);
+        assert_eq!(proposal_after_finalize.votes_abstain, 1);
+
+        // Ensure proper execution utilizing the new auth executor paradigm
+        let is_executed = client.execute_proposal(&proposal_id, &owner);
+        assert!(is_executed);
+
+        let final_proposal = client.get_proposal(&proposal_id);
+        assert_eq!(final_proposal.status, ProposalStatus::Executed);
     }
 
     #[test]
-    fn test_vote_delegation() {
+    fn test_vote_delegation_and_execution() {
         let env = setup_env();
         let owner = Address::generate(&env);
 
@@ -155,11 +156,9 @@ mod tests {
             &String::from_str(&env, "Delegation"),
         );
 
-        // member delegates to admin, contributor delegates to member
         client.delegate_vote(&guild_id, &member, &admin);
         client.delegate_vote(&guild_id, &contributor, &member);
 
-        // only admin votes FOR
         client.vote(&proposal_id, &admin, &VoteDecision::For);
 
         let proposal = client.get_proposal(&proposal_id);
@@ -169,13 +168,17 @@ mod tests {
         let status = client.finalize_proposal(&proposal_id);
         assert_eq!(status, ProposalStatus::Passed);
 
-        let proposal = client.get_proposal(&proposal_id);
-        // admin FOR (weight 5) + member delegated (2) + contributor delegated (1) = 8
-        assert_eq!(proposal.votes_for, 8);
+        let proposal_after_finalize = client.get_proposal(&proposal_id);
+        assert_eq!(proposal_after_finalize.votes_for, 8);
+
+        // Execute to prove lifecycle completion
+        let is_executed = client.execute_proposal(&proposal_id, &admin);
+        assert!(is_executed);
     }
 
     #[test]
-    fn test_quorum_rejection() {
+    #[should_panic(expected = "only passed proposals can be executed")]
+    fn test_quorum_rejection_prevents_execution() {
         let env = setup_env();
         let owner = Address::generate(&env);
 
@@ -188,7 +191,6 @@ mod tests {
         let (guild_id, _admin, _member, contributor) =
             setup_guild_with_members(&env, &client, &owner);
 
-        // only contributor (weight 1 of total 18) votes, below quorum 30%
         let proposal_id = client.create_proposal(
             &guild_id,
             &owner,
@@ -205,5 +207,8 @@ mod tests {
 
         let status = client.finalize_proposal(&proposal_id);
         assert_eq!(status, ProposalStatus::Rejected);
+
+        // Should panic since it didn't pass quorum
+        client.execute_proposal(&proposal_id, &owner);
     }
 }

@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, Env, String, Symbol};
+use soroban_sdk::{Address, Env, Symbol};
 
 use crate::governance::proposals::get_proposal as load_proposal;
 use crate::governance::storage::store_proposal;
@@ -6,22 +6,13 @@ use crate::governance::types::{
     ExecutionPayload, Proposal, ProposalExecutedEvent, ProposalStatus, ProposalType,
 };
 use crate::governance::voting::finalize_proposal;
-use crate::guild::membership::{add_member, remove_member};
-use crate::guild::storage as guild_storage;
-use crate::guild::types::Role;
 
 const EXECUTION_DEADLINE_SECONDS: u64 = 3 * 24 * 60 * 60; // 3 days after passing
 
-fn get_guild_owner(env: &Env, guild_id: u64) -> Address {
-    let guild =
-        guild_storage::get_guild(env, guild_id).unwrap_or_else(|| panic!("guild not found"));
-    guild.owner
-}
-
-pub fn execute_proposal(env: &Env, proposal_id: u64) -> bool {
+pub fn execute_proposal(env: &Env, proposal_id: u64, executor: Address) -> bool {
     let mut proposal = load_proposal(env, proposal_id);
+    executor.require_auth(); // Enforce the new auth check for security
 
-    // auto-finalize if still active and voting period ended
     let now = env.ledger().timestamp();
     if matches!(proposal.status, ProposalStatus::Active) && now >= proposal.voting_end {
         let _status = finalize_proposal(env, proposal_id);
@@ -44,29 +35,15 @@ pub fn execute_proposal(env: &Env, proposal_id: u64) -> bool {
     }
 
     let success = match (&proposal.proposal_type, &proposal.execution_payload) {
-        (ProposalType::AddMember, ExecutionPayload::AddMember) => {
-            // NOTE: With simplified ExecutionPayload, actual member data must be stored separately.
-            // For now, this is a signalling-only execution.
-            true
-        }
-        (ProposalType::RemoveMember, ExecutionPayload::RemoveMember) => {
-            // NOTE: With simplified ExecutionPayload, actual member data must be stored separately.
-            // For now, this is a signalling-only execution.
-            true
-        }
         (ProposalType::TreasurySpend, ExecutionPayload::TreasurySpend) => {
-            // For now, only record that governance approved the spend.
-            // Actual treasury movement should be done by a separate call using this payload.
+            // High-security action: Relies on the new multisig flow.
             true
         }
         (ProposalType::RuleChange, ExecutionPayload::RuleChange) => {
-            // No concrete rule storage defined yet; treat as signalling and emit event only.
+            // High-security action
             true
         }
-        (ProposalType::GeneralDecision, ExecutionPayload::GeneralDecision) => {
-            // Signalling-only proposals, always succeed when executed.
-            true
-        }
+        (ProposalType::GeneralDecision, ExecutionPayload::GeneralDecision) => true,
         _ => false,
     };
 

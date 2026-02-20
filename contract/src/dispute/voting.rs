@@ -1,9 +1,9 @@
-use soroban_sdk::{Env};
+use soroban_sdk::Env;
 
 use crate::dispute::storage;
 use crate::dispute::types::{DisputeStatus, Vote, VoteDecision};
-use crate::guild::storage as guild_storage;
 use crate::governance::types::role_weight;
+use crate::guild::storage as guild_storage;
 
 /// Calculate voting weight for a guild member based on role.
 pub fn calculate_vote_weight(env: &Env, guild_id: u64, voter: &soroban_sdk::Address) -> u32 {

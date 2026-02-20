@@ -19,9 +19,7 @@ pub fn get_next_proposal_id(env: &Env) -> u64 {
         .get(&PROPOSAL_COUNTER_KEY)
         .unwrap_or(0u64);
     let next = current + 1;
-    env.storage()
-        .persistent()
-        .set(&PROPOSAL_COUNTER_KEY, &next);
+    env.storage().persistent().set(&PROPOSAL_COUNTER_KEY, &next);
     next
 }
 
@@ -42,13 +40,13 @@ pub fn store_proposal(env: &Env, proposal: &Proposal) {
         .get(&GUILD_PROPOSALS_KEY)
         .unwrap_or_else(|| Map::new(env));
 
-    let mut list = index.get(proposal.guild_id).unwrap_or_else(|| Vec::new(env));
+    let mut list = index
+        .get(proposal.guild_id)
+        .unwrap_or_else(|| Vec::new(env));
     if !list.iter().any(|id| id == proposal.id) {
         list.push_back(proposal.id);
         index.set(proposal.guild_id, list);
-        env.storage()
-            .persistent()
-            .set(&GUILD_PROPOSALS_KEY, &index);
+        env.storage().persistent().set(&GUILD_PROPOSALS_KEY, &index);
     }
 }
 
@@ -100,11 +98,10 @@ pub fn store_vote(env: &Env, vote: &Vote) {
     proposal_votes.set(vote.voter.clone(), vote.clone());
     votes_map.set(vote.proposal_id, proposal_votes);
 
-    env.storage()
-        .persistent()
-        .set(&VOTES_KEY, &votes_map);
+    env.storage().persistent().set(&VOTES_KEY, &votes_map);
 }
 
+#[allow(dead_code)]
 pub fn get_vote(env: &Env, proposal_id: u64, voter: &Address) -> Option<Vote> {
     let votes_map: Map<u64, Map<Address, Vote>> = env
         .storage()
@@ -123,9 +120,7 @@ pub fn get_all_votes(env: &Env, proposal_id: u64) -> Map<Address, Vote> {
         .get(&VOTES_KEY)
         .unwrap_or_else(|| Map::new(env));
 
-    votes_map
-        .get(proposal_id)
-        .unwrap_or_else(|| Map::new(env))
+    votes_map.get(proposal_id).unwrap_or_else(|| Map::new(env))
 }
 
 pub fn set_delegation(env: &Env, guild_id: u64, delegator: &Address, delegate: &Address) {
@@ -173,7 +168,9 @@ pub fn get_config(env: &Env, guild_id: u64) -> GovernanceConfig {
         .get(&GOV_CONFIG_KEY)
         .unwrap_or_else(|| Map::new(env));
 
-    configs.get(guild_id).unwrap_or_else(GovernanceConfig::default)
+    configs
+        .get(guild_id)
+        .unwrap_or_else(GovernanceConfig::default)
 }
 
 pub fn set_config(env: &Env, guild_id: u64, config: &GovernanceConfig) {
@@ -184,7 +181,5 @@ pub fn set_config(env: &Env, guild_id: u64, config: &GovernanceConfig) {
         .unwrap_or_else(|| Map::new(env));
 
     configs.set(guild_id, config.clone());
-    env.storage()
-        .persistent()
-        .set(&GOV_CONFIG_KEY, &configs);
+    env.storage().persistent().set(&GOV_CONFIG_KEY, &configs);
 }

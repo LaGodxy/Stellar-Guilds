@@ -7,6 +7,7 @@ const BOUNTY_CNT_KEY: Symbol = symbol_short!("b_cnt");
 const GUILD_BOUNTIES_KEY: Symbol = symbol_short!("g_bnties");
 
 /// Initialize bounty storage
+#[allow(dead_code)]
 pub fn initialize(env: &Env) {
     if !env.storage().persistent().has(&BOUNTY_CNT_KEY) {
         env.storage().persistent().set(&BOUNTY_CNT_KEY, &0u64);

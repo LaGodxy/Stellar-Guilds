@@ -1,14 +1,12 @@
-use soroban_sdk::{contracttype, Address, Env, String, Vec, contracterror, panic_with_error};
-use crate::payment::types::{
-    PaymentPool, Recipient, DistributionRule, DistributionStatus,
-    PaymentPoolCreatedEvent, RecipientAddedEvent, DistributionExecutedEvent,
-    DistributionFailedEvent, PoolCancelledEvent,
-};
 use crate::payment::storage::{
-    get_payment_pool, store_payment_pool, get_pool_recipients, add_recipient_to_pool,
-    recipient_exists_in_pool, update_pool_status, clear_pool_recipients, get_next_pool_id,
-    pool_exists,
+    add_recipient_to_pool, clear_pool_recipients, get_next_pool_id, get_payment_pool,
+    get_pool_recipients, recipient_exists_in_pool, store_payment_pool, update_pool_status,
 };
+use crate::payment::types::{
+    DistributionExecutedEvent, DistributionFailedEvent, DistributionRule, DistributionStatus,
+    PaymentPool, PaymentPoolCreatedEvent, PoolCancelledEvent, Recipient, RecipientAddedEvent,
+};
+use soroban_sdk::{contracterror, Address, Env, String, Vec};
 
 /// Error types for payment distribution operations
 #[contracterror]
@@ -136,11 +134,18 @@ pub fn add_recipient(
         }
     }
 
-    let recipient = Recipient { address: address.clone(), share };
+    let recipient = Recipient {
+        address: address.clone(),
+        share,
+    };
     add_recipient_to_pool(env, pool_id, &recipient);
 
     // Emit event
-    let event = RecipientAddedEvent { pool_id, recipient: address, share };
+    let event = RecipientAddedEvent {
+        pool_id,
+        recipient: address,
+        share,
+    };
     env.events().publish(("RecipientAdded",), event);
 
     Ok(true)
@@ -206,7 +211,8 @@ fn calculate_recipient_amount(
         }
         DistributionRule::EqualSplit => {
             // amount = total_amount / total_recipients
-            let amount = pool.total_amount
+            let amount = pool
+                .total_amount
                 .checked_div(total_recipients as i128)
                 .ok_or(PaymentError::ArithmeticOverflow)?;
             Ok(amount)
@@ -236,7 +242,11 @@ fn calculate_recipient_amount(
 ///
 /// # Returns
 /// true if successful
-pub fn execute_distribution(env: &Env, pool_id: u64, caller: Address) -> Result<bool, PaymentError> {
+pub fn execute_distribution(
+    env: &Env,
+    pool_id: u64,
+    caller: Address,
+) -> Result<bool, PaymentError> {
     let mut pool = get_payment_pool(env, pool_id).ok_or(PaymentError::PoolNotFound)?;
 
     // Only pool creator can execute
@@ -304,7 +314,9 @@ pub fn execute_distribution(env: &Env, pool_id: u64, caller: Address) -> Result<
             // For now, skip
         }
 
-        total_distributed = total_distributed.checked_add(amount).ok_or(PaymentError::ArithmeticOverflow)?;
+        total_distributed = total_distributed
+            .checked_add(amount)
+            .ok_or(PaymentError::ArithmeticOverflow)?;
     }
 
     // Update pool status
@@ -331,12 +343,19 @@ pub fn execute_distribution(env: &Env, pool_id: u64, caller: Address) -> Result<
 ///
 /// # Returns
 /// The amount the recipient should receive
-pub fn get_recipient_amount(env: &Env, pool_id: u64, address: Address) -> Result<i128, PaymentError> {
+pub fn get_recipient_amount(
+    env: &Env,
+    pool_id: u64,
+    address: Address,
+) -> Result<i128, PaymentError> {
     let pool = get_payment_pool(env, pool_id).ok_or(PaymentError::PoolNotFound)?;
     let recipients = get_pool_recipients(env, pool_id);
 
     // Find the recipient
-    let recipient = recipients.iter().find(|r| r.address == address).ok_or(PaymentError::PoolNotFound)?;
+    let recipient = recipients
+        .iter()
+        .find(|r| r.address == address)
+        .ok_or(PaymentError::PoolNotFound)?;
 
     let total_recipients = recipients.len() as u32;
     let total_weight = if pool.rule == DistributionRule::Weighted {

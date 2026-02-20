@@ -12,6 +12,7 @@ const TREASURY_TX_INDEX_KEY: Symbol = symbol_short!("t_tx_idx");
 const BUDGETS_KEY: Symbol = symbol_short!("budgets");
 const ALLOWANCES_KEY: Symbol = symbol_short!("allows");
 
+#[allow(dead_code)]
 pub fn initialize_treasury_storage(env: &Env) {
     let storage = env.storage().persistent();
     if !storage.has(&TREASURY_CNT_KEY) {
@@ -179,6 +180,7 @@ pub fn store_allowance(env: &Env, allowance: &Allowance) {
     env.storage().persistent().set(&ALLOWANCES_KEY, &allowances);
 }
 
+#[allow(dead_code)]
 pub fn list_budgets_for_treasury(env: &Env, treasury_id: u64) -> Vec<Budget> {
     let budgets: Map<(u64, String), Budget> = env
         .storage()

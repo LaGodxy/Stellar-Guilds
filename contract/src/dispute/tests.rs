@@ -110,8 +110,7 @@ fn test_create_dispute_bounty_success() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, _admin, _member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, _admin, _member, contributor) = setup_guild_with_members(&client, &env);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
@@ -119,8 +118,7 @@ fn test_create_dispute_bounty_success() {
     let reason = String::from_str(&env, "Work rejected unfairly");
     let evidence = String::from_str(&env, "ipfs://evidence-1");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     assert_eq!(dispute_id, 1);
 }
@@ -134,8 +132,7 @@ fn test_create_dispute_milestone_success() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, _admin, _member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, _admin, _member, contributor) = setup_guild_with_members(&client, &env);
 
     let mut milestones: Vec<crate::milestone::types::MilestoneInput> = Vec::new(&env);
     milestones.push_back(crate::milestone::types::MilestoneInput {
@@ -159,8 +156,7 @@ fn test_create_dispute_milestone_success() {
     let reason = String::from_str(&env, "Milestone dispute");
     let evidence = String::from_str(&env, "https://example.com/evidence");
 
-    let dispute_id =
-        client.create_dispute(&milestone_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&milestone_id, &contributor, &owner, &reason, &evidence);
 
     assert_eq!(dispute_id, 1);
 }
@@ -175,8 +171,7 @@ fn test_submit_evidence_non_party_fails() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, _admin, _member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, _admin, _member, contributor) = setup_guild_with_members(&client, &env);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
@@ -184,8 +179,7 @@ fn test_submit_evidence_non_party_fails() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     let non_party = Address::generate(&env);
     let new_evidence = String::from_str(&env, "ipfs://other");
@@ -202,8 +196,7 @@ fn test_cast_vote_weighted_and_quorum() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, admin, member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, admin, member, contributor) = setup_guild_with_members(&client, &env);
     let member2 = Address::generate(&env);
     client.add_member(&guild_id, &member2, &Role::Member, &owner);
 
@@ -213,8 +206,7 @@ fn test_cast_vote_weighted_and_quorum() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     let weight_admin = client.calculate_dispute_vote_weight(&guild_id, &admin);
     let weight_member = client.calculate_dispute_vote_weight(&guild_id, &member);
@@ -241,8 +233,7 @@ fn test_double_vote_fails() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, admin, _member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, admin, _member, contributor) = setup_guild_with_members(&client, &env);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
@@ -250,8 +241,7 @@ fn test_double_vote_fails() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     client.cast_dispute_vote(&dispute_id, &admin, &VoteDecision::FavorPlaintiff);
     client.cast_dispute_vote(&dispute_id, &admin, &VoteDecision::FavorPlaintiff);
@@ -267,8 +257,7 @@ fn test_non_member_vote_fails() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, _admin, _member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, _admin, _member, contributor) = setup_guild_with_members(&client, &env);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
@@ -276,8 +265,7 @@ fn test_non_member_vote_fails() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     let outsider = Address::generate(&env);
     client.cast_dispute_vote(&dispute_id, &outsider, &VoteDecision::FavorPlaintiff);
@@ -293,8 +281,7 @@ fn test_self_voting_fails() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, _admin, _member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, _admin, _member, contributor) = setup_guild_with_members(&client, &env);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
@@ -302,8 +289,7 @@ fn test_self_voting_fails() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     client.cast_dispute_vote(&dispute_id, &owner, &VoteDecision::FavorDefendant);
 }
@@ -317,8 +303,7 @@ fn test_resolve_dispute_tie_splits_funds() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, _admin, member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, _admin, member, contributor) = setup_guild_with_members(&client, &env);
     let member2 = Address::generate(&env);
     client.add_member(&guild_id, &member2, &Role::Member, &owner);
 
@@ -328,8 +313,7 @@ fn test_resolve_dispute_tie_splits_funds() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     client.cast_dispute_vote(&dispute_id, &member, &VoteDecision::FavorPlaintiff);
     client.cast_dispute_vote(&dispute_id, &member2, &VoteDecision::FavorDefendant);
@@ -359,8 +343,7 @@ fn test_insufficient_quorum_expires_and_refunds_creator() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, admin, _member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, admin, _member, contributor) = setup_guild_with_members(&client, &env);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
@@ -368,8 +351,7 @@ fn test_insufficient_quorum_expires_and_refunds_creator() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     // Only one vote -> below 30% quorum (1 of 4 members)
     client.cast_dispute_vote(&dispute_id, &admin, &VoteDecision::FavorPlaintiff);
@@ -395,8 +377,7 @@ fn test_voting_deadline_enforced() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, admin, _member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, admin, _member, contributor) = setup_guild_with_members(&client, &env);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
@@ -404,8 +385,7 @@ fn test_voting_deadline_enforced() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     set_ledger_timestamp(&env, 1000 + 7 * 24 * 60 * 60 + 2);
 
@@ -422,8 +402,7 @@ fn test_concurrent_disputes_blocked() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, _admin, _member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, _admin, _member, contributor) = setup_guild_with_members(&client, &env);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
@@ -431,8 +410,7 @@ fn test_concurrent_disputes_blocked() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let _dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let _dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 }
@@ -446,8 +424,7 @@ fn test_dispute_status_updates_after_resolution() {
     let contract_id = register_and_init_contract(&env);
     let client = StellarGuildsContractClient::new(&env, &contract_id);
 
-    let (guild_id, owner, admin, member, contributor) =
-        setup_guild_with_members(&client, &env);
+    let (guild_id, owner, admin, member, contributor) = setup_guild_with_members(&client, &env);
 
     let token = create_mock_token(&env, &owner);
     let bounty_id = create_funded_bounty(&client, &env, guild_id, &owner, &owner, &token);
@@ -455,8 +432,7 @@ fn test_dispute_status_updates_after_resolution() {
     let reason = String::from_str(&env, "Dispute reason");
     let evidence = String::from_str(&env, "ipfs://evidence");
 
-    let dispute_id =
-        client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
+    let dispute_id = client.create_dispute(&bounty_id, &contributor, &owner, &reason, &evidence);
 
     client.cast_dispute_vote(&dispute_id, &admin, &VoteDecision::FavorPlaintiff);
     client.cast_dispute_vote(&dispute_id, &member, &VoteDecision::FavorPlaintiff);

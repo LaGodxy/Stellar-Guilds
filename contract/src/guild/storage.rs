@@ -31,9 +31,7 @@ pub fn get_next_guild_id(env: &Env) -> u64 {
         .unwrap_or(0u64);
 
     let next_id = counter + 1;
-    env.storage()
-        .persistent()
-        .set(&GUILD_COUNTER_KEY, &next_id);
+    env.storage().persistent().set(&GUILD_COUNTER_KEY, &next_id);
 
     next_id
 }
@@ -69,16 +67,12 @@ pub fn store_member(env: &Env, guild_id: u64, member: &Member) {
         .get(&MEMBERS_KEY)
         .unwrap_or_else(|| Map::new(env));
 
-    let mut guild_members = members_map
-        .get(guild_id)
-        .unwrap_or_else(|| Map::new(env));
+    let mut guild_members = members_map.get(guild_id).unwrap_or_else(|| Map::new(env));
 
     guild_members.set(member.address.clone(), member.clone());
     members_map.set(guild_id, guild_members);
 
-    env.storage()
-        .persistent()
-        .set(&MEMBERS_KEY, &members_map);
+    env.storage().persistent().set(&MEMBERS_KEY, &members_map);
 }
 
 /// Get a member from a guild
@@ -107,9 +101,7 @@ pub fn remove_member(env: &Env, guild_id: u64, address: &Address) -> bool {
         if had_member {
             guild_members.remove(address.clone());
             members_map.set(guild_id, guild_members);
-            env.storage()
-                .persistent()
-                .set(&MEMBERS_KEY, &members_map);
+            env.storage().persistent().set(&MEMBERS_KEY, &members_map);
         }
         had_member
     } else {
@@ -127,12 +119,12 @@ pub fn get_all_members(env: &Env, guild_id: u64) -> Vec<Member> {
 
     if let Some(guild_members) = members_map.get(guild_id) {
         let mut result = Vec::new(env);
-        
+
         // Iterate through all members in the guild using iter()
         for (_, member) in guild_members.iter() {
             result.push_back(member);
         }
-        
+
         result
     } else {
         Vec::new(env)
@@ -160,13 +152,13 @@ pub fn update_guild(env: &Env, guild: &Guild) {
 pub fn count_owners(env: &Env, guild_id: u64) -> u32 {
     let members = get_all_members(env, guild_id);
     let mut count = 0u32;
-    
+
     for i in 0..members.len() {
         let member = members.get_unchecked(i);
         if member.role == Role::Owner {
             count += 1;
         }
     }
-    
+
     count
 }

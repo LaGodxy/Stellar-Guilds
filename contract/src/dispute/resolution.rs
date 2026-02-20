@@ -91,8 +91,8 @@ pub fn resolve_dispute(env: &Env, dispute_id: u64) -> Resolution {
 
         // Refund rules for expired disputes
         if dispute.reference_type == DisputeReference::Bounty {
-            let mut bounty = bounty_storage::get_bounty(env, dispute.reference_id)
-                .expect("bounty not found");
+            let mut bounty =
+                bounty_storage::get_bounty(env, dispute.reference_id).expect("bounty not found");
 
             if bounty.status != BountyStatus::Cancelled
                 && bounty.status != BountyStatus::Expired
@@ -149,8 +149,8 @@ pub fn execute_resolution(env: &Env, dispute_id: u64) -> Vec<FundDistribution> {
 
     match dispute.reference_type {
         DisputeReference::Bounty => {
-            let mut bounty = bounty_storage::get_bounty(env, dispute.reference_id)
-                .expect("bounty not found");
+            let mut bounty =
+                bounty_storage::get_bounty(env, dispute.reference_id).expect("bounty not found");
 
             let total = bounty.funded_amount;
             if total > 0 {

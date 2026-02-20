@@ -41,6 +41,7 @@ fn get_member(env: &Env, guild_id: u64, address: &Address) -> Option<Member> {
     guild_storage::get_member(env, guild_id, address)
 }
 
+#[allow(dead_code)]
 fn ensure_guild_member(env: &Env, guild_id: u64, address: &Address) {
     if get_member(env, guild_id, address).is_none() {
         panic!("only guild members can perform this action");

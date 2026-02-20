@@ -17,6 +17,7 @@ pub use tracker::{
     get_milestone_view, get_project_progress, reject_milestone, release_milestone_payment,
     start_milestone, submit_milestone,
 };
+#[allow(unused_imports)]
 pub use types::{Milestone, MilestoneInput, MilestoneStatus, Project, ProjectStatus};
 
 // Tests are disabled pending treasury integration

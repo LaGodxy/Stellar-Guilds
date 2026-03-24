@@ -1,4 +1,4 @@
-﻿//! Bounty Escrow Contract Tests
+//! Bounty Escrow Contract Tests
 //!
 //! Comprehensive test coverage for bounty creation, funding, claiming,
 //! submission, approval, escrow release, cancellation, and expiration.
@@ -1386,4 +1386,55 @@ fn test_approve_bounty_not_funded_fails() {
     );
 
     client.approve_bounty(&bounty_id, &admin, &assignee);
+}
+
+// ============ Serialization Tests ============
+
+#[test]
+fn test_bounty_serialization() {
+    use soroban_sdk::{IntoVal, TryFromVal, Val};
+    use crate::bounty::types::Bounty;
+
+    let env = Env::default();
+    let bounty = Bounty {
+        id: 1,
+        guild_id: 2,
+        creator: Address::generate(&env),
+        title: String::from_str(&env, "Title"),
+        description: String::from_str(&env, "Desc"),
+        reward_amount: 100,
+        funded_amount: 50,
+        token: Address::generate(&env),
+        status: BountyStatus::Open,
+        claimer: None,
+        submission_url: None,
+        created_at: 1000,
+        expires_at: 2000,
+    };
+    
+    let val: Val = bounty.clone().into_val(&env);
+    let deserialized: Bounty = Bounty::try_from_val(&env, &val).unwrap();
+    
+    assert_eq!(bounty.id, deserialized.id);
+    assert_eq!(bounty.status, deserialized.status);
+    assert_eq!(bounty.reward_amount, deserialized.reward_amount);
+}
+
+#[test]
+fn test_escrow_state_serialization() {
+    use soroban_sdk::{IntoVal, TryFromVal, Val};
+    use crate::bounty::types::EscrowLockedState;
+
+    let env = Env::default();
+    let state = EscrowLockedState {
+        bounty_id: 1,
+        amount: 100,
+        token: Address::generate(&env),
+        is_locked: true,
+    };
+    
+    let val: Val = state.clone().into_val(&env);
+    let deserialized: EscrowLockedState = EscrowLockedState::try_from_val(&env, &val).unwrap();
+    
+    assert_eq!(state, deserialized);
 }

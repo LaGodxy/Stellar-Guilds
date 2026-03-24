@@ -10,6 +10,7 @@ import { BountyModule } from './bounty/bounty.module';
 import { SocialModule } from './social/social.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { APP_GUARD } from '@nestjs/core';
     GuildModule,
     BountyModule,
     SocialModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [

@@ -13,8 +13,9 @@ use guild::types::{Member, Role};
 
 mod bounty;
 use bounty::{
-    approve_bounty, approve_completion, cancel_bounty, claim_bounty, create_bounty, expire_bounty, fund_bounty,
-    get_bounty_data, get_guild_bounties_list, release_escrow, submit_work, Bounty,
+    approve_bounty, approve_completion, cancel_bounty, claim_bounty, create_bounty,
+    expire_bounty, fund_bounty, get_bounty_data, get_guild_bounties_list, release_escrow,
+    submit_work, Bounty,
 };
 
 mod treasury;
@@ -1450,7 +1451,7 @@ impl StellarGuildsContract {
         fund_bounty(&env, bounty_id, funder, amount)
     }
 
-    /// Claim a bounty (first-come-first-served)
+    /// Claim a bounty after approval
     ///
     /// # Arguments
     /// * `bounty_id` - The ID of the bounty to claim
@@ -1460,6 +1461,19 @@ impl StellarGuildsContract {
     /// `true` if claiming was successful
     pub fn claim_bounty(env: Env, bounty_id: u64, claimer: Address) -> bool {
         claim_bounty(&env, bounty_id, claimer)
+    }
+
+    /// Approve a funded bounty for a specific claimer
+    ///
+    /// # Arguments
+    /// * `bounty_id` - The ID of the bounty to approve
+    /// * `approver` - Address of the approver (must be guild admin/owner)
+    /// * `claimer` - Address allowed to claim the bounty
+    ///
+    /// # Returns
+    /// `true` if approval was successful
+    pub fn approve_bounty(env: Env, bounty_id: u64, approver: Address, claimer: Address) -> bool {
+        approve_bounty(&env, bounty_id, approver, claimer)
     }
 
     /// Submit work for a claimed bounty
@@ -1484,19 +1498,6 @@ impl StellarGuildsContract {
     /// `true` if approval was successful
     pub fn approve_completion(env: Env, bounty_id: u64, approver: Address) -> bool {
         approve_completion(&env, bounty_id, approver)
-    }
-
-    /// Approve a funded bounty directly, unlocking escrow claim for the assignee
-    ///
-    /// # Arguments
-    /// * `bounty_id` - The ID of the bounty to approve
-    /// * `approver` - Address of the approver (must be guild admin/owner)
-    /// * `assignee` - Address being assigned to the bounty
-    ///
-    /// # Returns
-    /// `true` if approval was successful
-    pub fn approve_bounty(env: Env, bounty_id: u64, approver: Address, assignee: Address) -> bool {
-        approve_bounty(&env, bounty_id, approver, assignee)
     }
 
     /// Release escrow funds to the bounty claimer

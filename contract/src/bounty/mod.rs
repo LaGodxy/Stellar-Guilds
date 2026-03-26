@@ -510,8 +510,6 @@ pub fn get_bounty_data(env: &Env, bounty_id: u64) -> Bounty {
     get_bounty(env, bounty_id).expect("Bounty not found")
 }
 
-
-
 pub fn get_guild_bounties_list(env: &Env, guild_id: u64) -> Vec<Bounty> {
     get_guild_bounties(env, guild_id)
 }

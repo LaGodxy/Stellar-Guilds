@@ -1791,7 +1791,7 @@ fn test_claim_payout_no_funds_to_claim() {
 
     // Partially fund
     client.fund_bounty(&bounty_id, &funder, &50i128);
-    
+
     // Create another bounty to fully fund it
     let bounty_id2 = client.create_bounty(
         &guild_id,
@@ -1802,7 +1802,7 @@ fn test_claim_payout_no_funds_to_claim() {
         &token,
         &2000u64,
     );
-    
+
     client.fund_bounty(&bounty_id2, &funder, &100i128);
     client.approve_bounty(&bounty_id2, &owner, &claimer);
     client.claim_bounty(&bounty_id2, &claimer);
@@ -1850,7 +1850,6 @@ fn test_bounty_serialization() {
     assert_eq!(bounty.status, deserialized.status);
     assert_eq!(bounty.reward_amount, deserialized.reward_amount);
 }
-
 
 #[test]
 fn test_escrow_state_serialization() {

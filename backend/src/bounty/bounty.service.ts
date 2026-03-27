@@ -296,7 +296,7 @@ export class BountyService {
 
   /**
    * Submit work for review
-   * State machine transition: IN_PROGRESS -> SUBMITTED_FOR_REVIEW
+   * State machine transition: IN_PROGRESS -> IN_REVIEW
    */
   async submitWork(
     bountyId: string,
@@ -324,11 +324,41 @@ export class BountyService {
       );
     }
 
-    const updatedBounty = await this.prisma.bounty.update({
-      where: { id: bountyId },
-      data: {
-        status: 'SUBMITTED_FOR_REVIEW',
-      },
+    const updatedBounty = await this.prisma.$transaction(async (tx) => {
+      const updateResult = await tx.bounty.updateMany({
+        where: {
+          id: bountyId,
+          assigneeId: userId,
+          status: 'IN_PROGRESS',
+        },
+        data: {
+          status: 'IN_REVIEW',
+        },
+      });
+
+      if (updateResult.count !== 1) {
+        const latestBounty = await tx.bounty.findUnique({
+          where: { id: bountyId },
+        });
+
+        if (!latestBounty) {
+          throw new NotFoundException('Bounty not found');
+        }
+
+        if (latestBounty.assigneeId !== userId) {
+          throw new ForbiddenException(
+            'Only the assigned user can submit work',
+          );
+        }
+
+        throw new BadRequestException(
+          `Cannot submit work for bounty in ${latestBounty.status} status. Work can only be submitted when bounty is IN_PROGRESS.`,
+        );
+      }
+
+      return tx.bounty.findUnique({
+        where: { id: bountyId },
+      });
     });
 
     // Notify bounty creator of submission
@@ -354,8 +384,8 @@ export class BountyService {
   /**
    * Review submitted bounty work
    * State machine transitions:
-   * - SUBMITTED_FOR_REVIEW + approve -> COMPLETED_PENDING_CLAIM
-   * - SUBMITTED_FOR_REVIEW + reject -> IN_PROGRESS (with feedback)
+   * - IN_REVIEW + approve -> COMPLETED_PENDING_CLAIM
+   * - IN_REVIEW + reject -> IN_PROGRESS (with feedback)
    */
   async reviewWork(
     bountyId: string,
@@ -377,9 +407,12 @@ export class BountyService {
     }
 
     // Validate current status allows review
-    if (bounty.status !== 'SUBMITTED_FOR_REVIEW') {
+    if (
+      bounty.status !== 'IN_REVIEW' &&
+      bounty.status !== 'SUBMITTED_FOR_REVIEW'
+    ) {
       throw new BadRequestException(
-        `Cannot review bounty in ${bounty.status} status. Work must be submitted for review first.`,
+        `Cannot review bounty in ${bounty.status} status. Work must be in review first.`,
       );
     }
 

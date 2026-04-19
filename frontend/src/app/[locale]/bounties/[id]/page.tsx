@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { MOCK_BOUNTIES } from "@/lib/mocks/bounties";
 import { StatusBadge } from "@/features/bounties/components/BountyCard";
 import { SubmissionForm } from "@/features/bounties/components/SubmissionForm";
+import { BountyApplicationForm } from "@/features/bounties/components/BountyApplicationForm";
 import { toast, Toaster } from "sonner";
 import {
   Clock,
@@ -17,6 +18,7 @@ import {
   BarChart3,
   Code2,
   CheckCircle2,
+  Send,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -28,6 +30,8 @@ export default function BountyDetailPage({ params }: PageProps) {
   const resolvedParams = use(params);
   const id = resolvedParams.id;
   const bounty = MOCK_BOUNTIES.find((b) => b.id === id) || MOCK_BOUNTIES[0];
+
+  const [showApplicationForm, setShowApplicationForm] = useState(false);
 
   const [viewState, setViewState] = useState<
     "idle" | "claimed" | "submitting" | "completed"
@@ -176,12 +180,21 @@ export default function BountyDetailPage({ params }: PageProps) {
 
                 <div className="space-y-3">
                   {viewState === "idle" && (
-                    <button
-                      onClick={handleClaim}
-                      className="w-full bg-white text-black py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-violet-500 transition-all active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.1)]"
-                    >
-                      Initialize Mission
-                    </button>
+                    <>
+                      <button
+                        onClick={handleClaim}
+                        className="w-full bg-white text-black py-5 rounded-2xl font-black uppercase tracking-widest hover:bg-violet-500 transition-all active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+                      >
+                        Initialize Mission
+                      </button>
+                      <button
+                        onClick={() => setShowApplicationForm(true)}
+                        className="w-full py-4 bg-violet-500/10 border border-violet-500/30 text-violet-400 rounded-2xl font-black uppercase tracking-widest hover:bg-violet-500/20 transition-all flex items-center justify-center gap-2"
+                      >
+                        <Send size={14} />
+                        Apply Now
+                      </button>
+                    </>
                   )}
 
                   {viewState === "claimed" && (
@@ -233,6 +246,13 @@ export default function BountyDetailPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      <BountyApplicationForm
+        isOpen={showApplicationForm}
+        onClose={() => setShowApplicationForm(false)}
+        bountyId={bounty.id}
+        bountyTitle={bounty.title}
+      />
     </div>
   );
 }
